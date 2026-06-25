@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.component.spec",
+  "component": {
+    "name": "sdkwork-invoice-workspace",
+    "domain": "commerce",
+    "capability": "invoice",
+    "root": "sdkwork-invoice"
+  }
+}
