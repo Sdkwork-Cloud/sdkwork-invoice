@@ -3,7 +3,7 @@
 SDKWork commerce **invoice** capability building-block repository (domain `commerce`).
 
 - Standards: `../sdkwork-specs/README.md`
-- Composition consumer: `../sdkwork-commerce` (T0 platform)
+- Composition consumer: `../sdkwork-clawrouter/vendor/sdkwork-commerce` (archived transitional platform snapshot)
 - Domain service: `crates/sdkwork-commerce-invoice-service/`
 - Repository SQL: `crates/sdkwork-commerce-invoice-repository-sqlx/`
 - HTTP API server: `crates/sdkwork-invoice-api-server/`

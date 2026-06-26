@@ -28,11 +28,11 @@ fn validates_invoice_status_lifecycle() {
 #[test]
 fn invoice_application_requires_order_and_payment_reference() {
     let draft =
-        InvoiceApplicationDraft::new("tenant-1", "order-1", "payment-1", "title-1").unwrap();
+        InvoiceApplicationDraft::new("100001", "order-1", "payment-1", "title-1").unwrap();
 
     assert_eq!(draft.order_id, "order-1");
     assert_eq!(draft.payment_id, "payment-1");
-    assert!(InvoiceApplicationDraft::new("tenant-1", "", "payment-1", "title-1").is_err());
+    assert!(InvoiceApplicationDraft::new("100001", "", "payment-1", "title-1").is_err());
 }
 
 #[test]

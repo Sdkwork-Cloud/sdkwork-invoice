@@ -364,7 +364,7 @@ mod tests {
     fn invoice_record_sums_item_amounts_without_float_rounding() {
         let first = InvoiceItemRecord::new(
             "item-1",
-            "tenant-1",
+            "100001",
             "invoice-1",
             None,
             "LLM usage",
@@ -375,7 +375,7 @@ mod tests {
         .unwrap();
         let second = InvoiceItemRecord::new(
             "item-2",
-            "tenant-1",
+            "100001",
             "invoice-1",
             None,
             "Image usage",
@@ -387,8 +387,8 @@ mod tests {
 
         let invoice = InvoiceRecord::new(
             "invoice-1",
-            "tenant-1",
-            Some("org-1"),
+            "100001",
+            Some("0"),
             "user-1",
             "order-1",
             "payment-1",
