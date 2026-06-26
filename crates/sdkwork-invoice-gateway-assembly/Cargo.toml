@@ -1,0 +1,17 @@
+[package]
+name = "sdkwork-invoice-gateway-assembly"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+description = "Generated gateway assembly for sdkwork-invoice application HTTP plane."
+
+[lib]
+name = "sdkwork_invoice_gateway_assembly"
+path = "src/lib.rs"
+
+[dependencies]
+axum.workspace = true
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
+sdkwork_invoice_service_host.workspace = true
+sdkwork_routes_invoice_app_api = { package = "sdkwork-routes-invoice-app-api", path = "../sdkwork-routes-invoice-app-api" }
+sdkwork_routes_invoice_backend_api = { package = "sdkwork-routes-invoice-backend-api", path = "../sdkwork-routes-invoice-backend-api" }

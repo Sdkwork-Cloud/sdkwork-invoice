@@ -33,7 +33,7 @@ Migration status: **complete**.
 | --- | --- | --- |
 | Domain commands/queries | `sdkwork-commerce-invoice-service` | Business validation and ports |
 | SQL repositories | `sdkwork-commerce-invoice-repository-sqlx` | Tenant-scoped persistence |
-| HTTP route builders | sdkwork-router-invoice-app-api, sdkwork-router-invoice-backend-api | `build_*_router` exports without IAM |
+| HTTP route builders | sdkwork-routes-invoice-app-api, sdkwork-routes-invoice-backend-api | `build_*_router` exports without IAM |
 | IAM / gateway composition | `sdkwork-commerce` | Thin wrappers only |
 | OpenAPI / SDK authority | `sdkwork-commerce/sdks/` | Composed commerce SDK families |
 
@@ -43,8 +43,8 @@ Standard 7-crate capability workspace:
 
 - `crates/sdkwork-commerce-invoice-service/`
 - `crates/sdkwork-commerce-invoice-repository-sqlx/`
-- `crates/sdkwork-router-invoice-app-api/`
-- `crates/sdkwork-router-invoice-backend-api/`
+- `crates/sdkwork-routes-invoice-app-api/`
+- `crates/sdkwork-routes-invoice-backend-api/`
 - `crates/sdkwork-invoice-database-host/`
 - `crates/sdkwork-invoice-service-host/`
 - `crates/sdkwork-invoice-api-server/`
