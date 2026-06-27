@@ -8,13 +8,13 @@ Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md
 
 ## Document Map
 
-- Platform split alignment (commerce T0): `../sdkwork-commerce/docs/architecture/tech/TECH-2026-06-24-commerce-capability-repo-split-alignment.md`
+- Commerce repository dissolution: `../sdkwork-specs/MIGRATION_SPEC.md` §8
 
 ## 1. Background And Problem
 
 Invoice issuance, retrieval, and compliance metadata must be auditable and separated from order/payment write paths.
 
-This repository is a **T1 commerce capability building block**. `sdkwork-commerce` remains the T0 composition layer (gateway, IAM wrappers, composed SDK). This repository owns domain logic, persistence, and HTTP route builders for the **invoice** capability.
+This repository is a **T1 commerce capability building block**. The `sdkwork-commerce` monolith has been dissolved; this repository is self-contained with its own domain logic, persistence, HTTP route builders, API server, and IAM middleware for the **invoice** capability.
 
 ## 2. Target Users
 
@@ -24,7 +24,7 @@ Finance operators, buyers downloading invoices, and compliance reviewers.
 
 ### Goals
 
-- Own invoice SQL and app invoice HTTP routers with commerce T0 IAM wrappers.
+- Own invoice SQL and app invoice HTTP routers with T1 `*-standalone-gateway` IAM wrappers.
 
 ### Non-Goals
 
@@ -50,7 +50,7 @@ Migration status: **complete**.
 ## 6. Success Metrics
 
 - Invoice SQL and routes owned exclusively in this repository.
-- Commerce invoice integration tests pass via thin wrappers.
+- Commerce invoice integration tests pass via T1 standalone-gateway IAM wrappers.
 
 ## 7. Phases
 
@@ -59,7 +59,7 @@ Migration status: **complete**.
 
 ## 8. Linked Requirements
 
-- Commerce capability split alignment: `../sdkwork-commerce/docs/architecture/tech/TECH-2026-06-24-commerce-capability-repo-split-alignment.md`
+- Commerce repository dissolution: `../sdkwork-specs/MIGRATION_SPEC.md` §8
 - Component contract: `specs/component.spec.json` (when present)
 - Machine contracts: local `specs/`, future `apis/`, and generated `sdks/`
 

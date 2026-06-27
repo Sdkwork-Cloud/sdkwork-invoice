@@ -1,12 +1,12 @@
 [package]
-name = "sdkwork-invoice-api-server"
+name = "sdkwork-invoice-standalone-gateway"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "invoice-server"
+name = "sdkwork-invoice-standalone-gateway"
 path = "src/main.rs"
 
 [dependencies]
