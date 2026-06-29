@@ -1,0 +1,7 @@
+{
+  "tables": [
+    "commerce_invoice_title",
+    "commerce_invoice",
+    "commerce_invoice_item"
+  ]
+}

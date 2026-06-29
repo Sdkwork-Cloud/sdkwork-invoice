@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.database.seed",
+  "moduleId": "invoice",
+  "defaultLocale": "zh-CN",
+  "profiles": {
+    "standard": {
+      "common": [],
+      "locales": {}
+    }
+  }
+}
