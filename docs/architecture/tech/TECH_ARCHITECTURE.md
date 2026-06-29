@@ -11,7 +11,7 @@ Specs: ARCHITECTURE_DECISION_SPEC.md, RUST_CODE_SPEC.md, API_SPEC.md, WEB_FRAMEW
 
 ## 1. Architecture Overview
 
-`sdkwork-invoice` is a **T1 capability repository** in the commerce domain. It owns domain services, SQL repositories, HTTP route builders, and a standalone gateway with IAM middleware. The `sdkwork-commerce` monolith has been dissolved; each T1 capability repository is self-contained.
+`sdkwork-invoice` is a **T1 capability repository** in the commerce domain. It owns domain services, SQL repositories, HTTP route builders, and a standalone gateway with IAM middleware. The `sdkwork-commerce (deleted)` monolith has been dissolved; each T1 capability repository is self-contained.
 
 ```text
 T1 invoice crate  →  build_*_router()     (no IAM)
@@ -31,8 +31,8 @@ Migration status: **complete**.
 
 | Layer | Owner | Notes |
 | --- | --- | --- |
-| Domain commands/queries | `sdkwork-commerce-invoice-service` | Business validation and ports |
-| SQL repositories | `sdkwork-commerce-invoice-repository-sqlx` | Tenant-scoped persistence |
+| Domain commands/queries | `sdkwork-invoice-service` | Business validation and ports |
+| SQL repositories | `sdkwork-commerce (deleted)-invoice-repository-sqlx` | Tenant-scoped persistence |
 | HTTP route builders | sdkwork-routes-invoice-app-api, sdkwork-routes-invoice-backend-api | `build_*_router` exports without IAM |
 | IAM / gateway composition | `sdkwork-invoice-standalone-gateway` | IAM middleware at T1 standalone-gateway |
 | OpenAPI / SDK authority | `sdkwork-invoice/sdks/` | Per-T1 SDK families |
@@ -41,8 +41,8 @@ Migration status: **complete**.
 
 Standard 7-crate capability workspace:
 
-- `crates/sdkwork-commerce-invoice-service/`
-- `crates/sdkwork-commerce-invoice-repository-sqlx/`
+- `crates/sdkwork-invoice-service/`
+- `crates/sdkwork-commerce (deleted)-invoice-repository-sqlx/`
 - `crates/sdkwork-routes-invoice-app-api/`
 - `crates/sdkwork-routes-invoice-backend-api/`
 - `crates/sdkwork-invoice-database-host/`

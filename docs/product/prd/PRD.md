@@ -14,7 +14,7 @@ Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md
 
 Invoice issuance, retrieval, and compliance metadata must be auditable and separated from order/payment write paths.
 
-This repository is a **T1 commerce capability building block**. The `sdkwork-commerce` monolith has been dissolved; this repository is self-contained with its own domain logic, persistence, HTTP route builders, API server, and IAM middleware for the **invoice** capability.
+This repository is a **T1 commerce capability building block**. The `sdkwork-commerce (deleted)` monolith has been dissolved; this repository is self-contained with its own domain logic, persistence, HTTP route builders, API server, and IAM middleware for the **invoice** capability.
 
 ## 2. Target Users
 

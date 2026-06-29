@@ -1,0 +1,31 @@
+schema_version: 1
+kind: sdkwork.database.schema
+module_id: invoice
+contract_version: 1.0.0
+owner_team: sdkwork-invoice
+compliance_level: L2
+engines:
+  - postgres
+  - sqlite
+table_prefix: commerce_
+tables:
+  - name: commerce_invoice_title
+    profile: user_entity
+    compliance_level: L2
+    system_of_record: true
+    write_owner: sdkwork-invoice
+    description: Invoice title / billing identity owned by the invoice capability.
+
+  - name: commerce_invoice
+    profile: user_entity
+    compliance_level: L2
+    system_of_record: true
+    write_owner: sdkwork-invoice
+    description: Invoice header records for owner-scoped billing documents.
+
+  - name: commerce_invoice_item
+    profile: user_entity
+    compliance_level: L2
+    system_of_record: true
+    write_owner: sdkwork-invoice
+    description: Invoice line items linked to invoice headers.

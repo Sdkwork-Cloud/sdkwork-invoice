@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
-use sdkwork_commerce_contract_service::CommerceServiceError;
-use sdkwork_commerce_invoice_service::{
+use sdkwork_contract_service::CommerceServiceError;
+use sdkwork_invoice_service::{
     CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemRecord,
     InvoiceListPage, InvoiceListQuery, InvoiceRecord, SubmitOwnerInvoiceCommand,
     UpdateOwnerInvoiceCommand,
 };
-use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
+use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
-pub struct SqliteCommerceInvoiceStore {
-    pool: SqlitePool,
+pub struct PostgresCommerceInvoiceStore {
+    pool: PgPool,
 }
 
 #[derive(Debug, Clone)]
@@ -32,8 +32,8 @@ struct InvoiceRow {
     updated_at: String,
 }
 
-impl SqliteCommerceInvoiceStore {
-    pub fn new(pool: SqlitePool) -> Self {
+impl PostgresCommerceInvoiceStore {
+    pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
@@ -48,19 +48,17 @@ impl SqliteCommerceInvoiceStore {
                    title_id, status, invoice_no, invoice_code, document_url,
                    created_at, issued_at, updated_at
             FROM commerce_invoice
-            WHERE tenant_id = CAST(? AS TEXT)
-              AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
-              AND owner_user_id = CAST(? AS TEXT)
-              AND (? IS NULL OR status = ?)
-            ORDER BY COALESCE(issued_at, created_at) DESC, id DESC
-            LIMIT ? OFFSET ?
+            WHERE tenant_id = CAST($1 AS TEXT)
+              AND ((organization_id = CAST($2 AS TEXT)) OR (organization_id IS NULL AND $2 IS NULL))
+              AND owner_user_id = CAST($3 AS TEXT)
+              AND ($4 IS NULL OR status = $4)
+            ORDER BY COALESCE(issued_at, created_at) DESC NULLS LAST, id DESC
+            LIMIT $5 OFFSET $6
             "#,
         )
         .bind(&query.tenant_id)
         .bind(query.organization_id.as_deref())
-        .bind(query.organization_id.as_deref())
         .bind(&query.owner_user_id)
-        .bind(query.status.as_deref())
         .bind(query.status.as_deref())
         .bind(query.limit())
         .bind(query.offset())
@@ -89,14 +87,13 @@ impl SqliteCommerceInvoiceStore {
                    title_id, status, invoice_no, invoice_code, document_url,
                    created_at, issued_at, updated_at
             FROM commerce_invoice
-            WHERE tenant_id = CAST(? AS TEXT)
-              AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
-              AND owner_user_id = CAST(? AS TEXT)
-              AND id = CAST(? AS TEXT)
+            WHERE tenant_id = CAST($1 AS TEXT)
+              AND ((organization_id = CAST($2 AS TEXT)) OR (organization_id IS NULL AND $2 IS NULL))
+              AND owner_user_id = CAST($3 AS TEXT)
+              AND id = CAST($4 AS TEXT)
             "#,
         )
         .bind(&query.tenant_id)
-        .bind(query.organization_id.as_deref())
         .bind(query.organization_id.as_deref())
         .bind(&query.owner_user_id)
         .bind(&query.invoice_id)
@@ -138,7 +135,7 @@ impl SqliteCommerceInvoiceStore {
             r#"
             INSERT INTO commerce_invoice_title
                 (id, tenant_id, owner_user_id, title_type, name, tax_no, created_at, updated_at)
-            VALUES (?, CAST(? AS TEXT), CAST(? AS TEXT), ?, ?, ?, ?, ?)
+            VALUES ($1, CAST($2 AS TEXT), CAST($3 AS TEXT), $4, $5, $6, $7, $8)
             "#,
         )
         .bind(&title_id)
@@ -159,7 +156,7 @@ impl SqliteCommerceInvoiceStore {
                 (id, tenant_id, organization_id, owner_user_id, order_id, payment_id, title_id,
                  status, invoice_no, invoice_code, document_url, created_at, issued_at, updated_at)
             VALUES
-                (?, CAST(? AS TEXT), CAST(? AS TEXT), CAST(? AS TEXT), ?, ?, ?, 'draft', NULL, NULL, NULL, ?, NULL, ?)
+                ($1, CAST($2 AS TEXT), CAST($3 AS TEXT), CAST($4 AS TEXT), $5, $6, $7, 'draft', NULL, NULL, NULL, $8, NULL, $9)
             "#,
         )
         .bind(&invoice_id)
@@ -179,7 +176,7 @@ impl SqliteCommerceInvoiceStore {
             r#"
             INSERT INTO commerce_invoice_item
                 (id, tenant_id, invoice_id, order_item_id, title, amount, tax_amount, created_at)
-            VALUES (?, CAST(? AS TEXT), ?, NULL, ?, ?, '0.00', ?)
+            VALUES ($1, CAST($2 AS TEXT), $3, NULL, $4, $5, '0.00', $6)
             "#,
         )
         .bind(&item_id)
@@ -215,11 +212,11 @@ impl SqliteCommerceInvoiceStore {
         let updated = sqlx::query(
             r#"
             UPDATE commerce_invoice
-            SET status = 'submitted', updated_at = ?
-            WHERE tenant_id = CAST(? AS TEXT)
-              AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
-              AND owner_user_id = CAST(? AS TEXT)
-              AND id = CAST(? AS TEXT)
+            SET status = 'submitted', updated_at = $1
+            WHERE tenant_id = CAST($2 AS TEXT)
+              AND ((organization_id = CAST($3 AS TEXT)) OR (organization_id IS NULL AND $4 IS NULL))
+              AND owner_user_id = CAST($5 AS TEXT)
+              AND id = CAST($6 AS TEXT)
               AND LOWER(COALESCE(status, '')) IN ('draft', 'failed')
             "#,
         )
@@ -258,11 +255,11 @@ impl SqliteCommerceInvoiceStore {
         let updated = sqlx::query(
             r#"
             UPDATE commerce_invoice
-            SET status = 'cancelled', updated_at = ?
-            WHERE tenant_id = CAST(? AS TEXT)
-              AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
-              AND owner_user_id = CAST(? AS TEXT)
-              AND id = CAST(? AS TEXT)
+            SET status = 'cancelled', updated_at = $1
+            WHERE tenant_id = CAST($2 AS TEXT)
+              AND ((organization_id = CAST($3 AS TEXT)) OR (organization_id IS NULL AND $4 IS NULL))
+              AND owner_user_id = CAST($5 AS TEXT)
+              AND id = CAST($6 AS TEXT)
               AND LOWER(COALESCE(status, '')) IN ('issued', 'completed')
             "#,
         )
@@ -313,12 +310,12 @@ impl SqliteCommerceInvoiceStore {
             sqlx::query(
                 r#"
                 UPDATE commerce_invoice_title
-                SET name = COALESCE(?, name),
-                    tax_no = COALESCE(?, tax_no),
-                    updated_at = ?
-                WHERE id = ?
-                  AND tenant_id = CAST(? AS TEXT)
-                  AND owner_user_id = CAST(? AS TEXT)
+                SET name = COALESCE($1, name),
+                    tax_no = COALESCE($2, tax_no),
+                    updated_at = $3
+                WHERE id = $4
+                  AND tenant_id = CAST($5 AS TEXT)
+                  AND owner_user_id = CAST($6 AS TEXT)
                 "#,
             )
             .bind(command.title.as_deref())
@@ -335,10 +332,10 @@ impl SqliteCommerceInvoiceStore {
         sqlx::query(
             r#"
             UPDATE commerce_invoice
-            SET updated_at = ?
-            WHERE id = ?
-              AND tenant_id = CAST(? AS TEXT)
-              AND owner_user_id = CAST(? AS TEXT)
+            SET updated_at = $1
+            WHERE id = $2
+              AND tenant_id = CAST($3 AS TEXT)
+              AND owner_user_id = CAST($4 AS TEXT)
             "#,
         )
         .bind(&now)
@@ -362,24 +359,22 @@ impl SqliteCommerceInvoiceStore {
 }
 
 async fn count_invoices(
-    pool: &SqlitePool,
+    pool: &PgPool,
     query: &InvoiceListQuery,
 ) -> Result<i64, CommerceServiceError> {
     sqlx::query_scalar(
         r#"
         SELECT COUNT(1)
         FROM commerce_invoice
-        WHERE tenant_id = CAST(? AS TEXT)
-          AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
-          AND owner_user_id = CAST(? AS TEXT)
-          AND (? IS NULL OR status = ?)
+        WHERE tenant_id = CAST($1 AS TEXT)
+          AND ((organization_id = CAST($2 AS TEXT)) OR (organization_id IS NULL AND $2 IS NULL))
+          AND owner_user_id = CAST($3 AS TEXT)
+          AND ($4 IS NULL OR status = $4)
         "#,
     )
     .bind(&query.tenant_id)
     .bind(query.organization_id.as_deref())
-    .bind(query.organization_id.as_deref())
     .bind(&query.owner_user_id)
-    .bind(query.status.as_deref())
     .bind(query.status.as_deref())
     .fetch_one(pool)
     .await
@@ -387,7 +382,7 @@ async fn count_invoices(
 }
 
 async fn load_items_by_invoice(
-    pool: &SqlitePool,
+    pool: &PgPool,
     tenant_id: &str,
     invoices: &[InvoiceRow],
 ) -> Result<HashMap<String, Vec<InvoiceItemRecord>>, CommerceServiceError> {
@@ -395,7 +390,7 @@ async fn load_items_by_invoice(
         return Ok(HashMap::new());
     }
 
-    let mut builder = QueryBuilder::<Sqlite>::new(
+    let mut builder = QueryBuilder::<Postgres>::new(
         "SELECT id, tenant_id, invoice_id, order_item_id, title, amount, tax_amount, created_at \
          FROM commerce_invoice_item WHERE tenant_id = ",
     );
@@ -461,7 +456,7 @@ fn invoice_from_row(
     )
 }
 
-fn map_invoice_row(row: &sqlx::sqlite::SqliteRow) -> InvoiceRow {
+fn map_invoice_row(row: &sqlx::postgres::PgRow) -> InvoiceRow {
     InvoiceRow {
         id: string_cell(row, "id"),
         tenant_id: string_cell(row, "tenant_id"),
@@ -480,20 +475,16 @@ fn map_invoice_row(row: &sqlx::sqlite::SqliteRow) -> InvoiceRow {
     }
 }
 
-fn string_cell(row: &sqlx::sqlite::SqliteRow, name: &str) -> String {
+fn string_cell(row: &sqlx::postgres::PgRow, name: &str) -> String {
     row.try_get::<String, _>(name).unwrap_or_default()
 }
 
-fn optional_string_cell(row: &sqlx::sqlite::SqliteRow, name: &str) -> Option<String> {
+fn optional_string_cell(row: &sqlx::postgres::PgRow, name: &str) -> Option<String> {
     row.try_get::<Option<String>, _>(name)
         .ok()
         .flatten()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
-}
-
-fn store_error(context: &str, error: sqlx::Error) -> CommerceServiceError {
-    CommerceServiceError::storage(format!("{context}: {error}"))
 }
 
 fn invoice_command_timestamp() -> String {
@@ -502,4 +493,8 @@ fn invoice_command_timestamp() -> String {
         .map(|duration| duration.as_secs() as i64)
         .unwrap_or(0);
     format!("{seconds}")
+}
+
+fn store_error(context: &str, error: sqlx::Error) -> CommerceServiceError {
+    CommerceServiceError::storage(format!("{context}: {error}"))
 }

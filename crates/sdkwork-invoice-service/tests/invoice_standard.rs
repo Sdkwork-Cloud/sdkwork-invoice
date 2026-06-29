@@ -1,4 +1,4 @@
-use sdkwork_commerce_invoice_service::{
+use sdkwork_invoice_service::{
     InvoiceApplicationDraft, InvoiceProviderCommand, InvoiceProviderPortRequirement, InvoiceStatus,
     InvoiceTitle, InvoiceTransition,
 };

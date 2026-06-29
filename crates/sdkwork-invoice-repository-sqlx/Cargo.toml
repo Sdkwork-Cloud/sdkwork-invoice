@@ -1,5 +1,5 @@
 [package]
-name = "sdkwork-commerce-invoice-repository-sqlx"
+name = "sdkwork-invoice-repository-sqlx"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,5 +12,5 @@ path = "src/lib.rs"
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
-sdkwork_commerce_contract_service.workspace = true
-sdkwork_commerce_invoice_service.workspace = true
+sdkwork_contract_service.workspace = true
+sdkwork_invoice_service.workspace = true

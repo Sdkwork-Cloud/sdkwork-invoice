@@ -1,11 +1,11 @@
-# sdkwork-commerce-invoice-service
+# sdkwork-invoice-service
 
 Domain: commerce
 Capability: commerce
 Package type: rust-crate
 Status: stable
 
-This README is the SDKWork module entrypoint for `sdkwork-commerce-invoice-service`. The machine-readable component contract is `specs/component.spec.json`; canonical standards are under `../../../sdkwork-specs/`.
+This README is the SDKWork module entrypoint for `sdkwork-invoice-service`. The machine-readable component contract is `specs/component.spec.json`; canonical standards are under `../../../sdkwork-specs/`.
 
 ## Public API
 
@@ -33,7 +33,7 @@ Extension points are limited to public exports, runtime entrypoints, SDK clients
 
 ## Verification
 
-- `cargo test --manifest-path crates/sdkwork-commerce-invoice-service/Cargo.toml`
+- `cargo test --manifest-path crates/sdkwork-invoice-service/Cargo.toml`
 
 ## Owner And Status
 

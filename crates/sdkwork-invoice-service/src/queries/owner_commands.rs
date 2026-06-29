@@ -52,7 +52,7 @@ impl CreateOwnerInvoiceCommand {
         tax_no: Option<&str>,
         total_amount: &str,
         invoice_type: &str,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         crate::validation::require_non_empty("tenant_id", tenant_id)?;
         crate::validation::require_non_empty("owner_user_id", owner_user_id)?;
         crate::validation::require_non_empty("title", title)?;
@@ -79,7 +79,7 @@ impl SubmitOwnerInvoiceCommand {
         organization_id: Option<&str>,
         owner_user_id: &str,
         invoice_id: &str,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         crate::validation::require_non_empty("tenant_id", tenant_id)?;
         crate::validation::require_non_empty("owner_user_id", owner_user_id)?;
         crate::validation::require_non_empty("invoice_id", invoice_id)?;
@@ -100,7 +100,7 @@ impl CancelOwnerInvoiceCommand {
         owner_user_id: &str,
         invoice_id: &str,
         cancel_reason: Option<&str>,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         crate::validation::require_non_empty("tenant_id", tenant_id)?;
         crate::validation::require_non_empty("owner_user_id", owner_user_id)?;
         crate::validation::require_non_empty("invoice_id", invoice_id)?;
@@ -128,7 +128,7 @@ impl UpdateOwnerInvoiceCommand {
         bank_account: Option<&str>,
         register_address: Option<&str>,
         register_phone: Option<&str>,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         crate::validation::require_non_empty("tenant_id", tenant_id)?;
         crate::validation::require_non_empty("owner_user_id", owner_user_id)?;
         crate::validation::require_non_empty("invoice_id", invoice_id)?;

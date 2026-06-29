@@ -1,5 +1,5 @@
 use crate::{CreateInvoiceApplicationCommand, InvoiceApplicationDraft};
-use sdkwork_commerce_contract_service::CommerceServiceError;
+use sdkwork_contract_service::CommerceServiceError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum InvoiceProviderCommand {

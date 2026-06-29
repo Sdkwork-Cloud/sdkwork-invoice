@@ -28,7 +28,7 @@ impl InvoiceListQuery {
         status: Option<&str>,
         page: Option<i64>,
         page_size: Option<i64>,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         validate_page(page)?;
         validate_page_size(page_size)?;
         Ok(Self {
@@ -60,7 +60,7 @@ impl InvoiceDetailQuery {
         organization_id: Option<&str>,
         owner_user_id: &str,
         invoice_id: &str,
-    ) -> Result<Self, sdkwork_commerce_contract_service::CommerceServiceError> {
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
         Ok(Self {
             invoice_id: required_text("invoice_id", invoice_id)?,
             organization_id: optional_text(organization_id),
@@ -72,11 +72,11 @@ impl InvoiceDetailQuery {
 
 fn validate_page(
     page: Option<i64>,
-) -> Result<(), sdkwork_commerce_contract_service::CommerceServiceError> {
+) -> Result<(), sdkwork_contract_service::CommerceServiceError> {
     if let Some(page) = page {
         if page < 1 {
             return Err(
-                sdkwork_commerce_contract_service::CommerceServiceError::validation(
+                sdkwork_contract_service::CommerceServiceError::validation(
                     "page must be greater than or equal to 1",
                 ),
             );
@@ -87,11 +87,11 @@ fn validate_page(
 
 fn validate_page_size(
     page_size: Option<i64>,
-) -> Result<(), sdkwork_commerce_contract_service::CommerceServiceError> {
+) -> Result<(), sdkwork_contract_service::CommerceServiceError> {
     if let Some(page_size) = page_size {
         if !(1..=200).contains(&page_size) {
             return Err(
-                sdkwork_commerce_contract_service::CommerceServiceError::validation(
+                sdkwork_contract_service::CommerceServiceError::validation(
                     "page_size must be between 1 and 200",
                 ),
             );
@@ -103,7 +103,7 @@ fn validate_page_size(
 fn required_text(
     field_name: &str,
     value: &str,
-) -> Result<String, sdkwork_commerce_contract_service::CommerceServiceError> {
+) -> Result<String, sdkwork_contract_service::CommerceServiceError> {
     crate::validation::require_non_empty(field_name, value)?;
     Ok(value.trim().to_string())
 }
