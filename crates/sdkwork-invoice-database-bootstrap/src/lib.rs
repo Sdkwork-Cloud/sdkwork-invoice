@@ -5,12 +5,12 @@
 
 /// Canonical Postgres baseline for invoice tables owned by `sdkwork-invoice`.
 pub fn invoice_foundation_migration_sql() -> &'static str {
-    include_str!("../../../database/migrations/postgres/0001_invoice_tables.up.sql")
+    include_str!("../../../database/ddl/baseline/postgres/0001_invoice_baseline.sql")
 }
 
 /// SQLite mirror of the invoice module baseline for host installers and drift checks.
 pub fn invoice_foundation_migration_sqlite() -> &'static str {
-    include_str!("../../../database/migrations/sqlite/0001_invoice_tables.up.sql")
+    include_str!("../../../database/ddl/baseline/sqlite/0001_invoice_baseline.sql")
 }
 
 /// Tables that must exist after the invoice module baseline is applied.

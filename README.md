@@ -1,4 +1,5 @@
 # sdkwork-invoice
+repository-kind: application
 
 SDKWork commerce **invoice** capability building-block repository (domain `commerce`).
 
