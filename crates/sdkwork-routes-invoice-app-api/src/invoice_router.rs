@@ -66,7 +66,6 @@ struct AppInvoiceState {
 #[derive(Debug, Deserialize)]
 struct InvoiceListQueryParams {
     page: Option<i64>,
-    #[serde(rename = "pageSize", alias = "page_size")]
     page_size: Option<i64>,
     status: Option<String>,
 }

@@ -4,7 +4,7 @@
   "applicationCode": "invoice",
   "packageName": "sdkwork-invoice-gateway-assembly",
   "crateDir": "crates/sdkwork-invoice-gateway-assembly",
-  "generatedAt": "2026-06-25T13:08:05.555Z",
+  "generatedAt": "2026-07-08T01:34:12.510Z",
   "routeCrates": [
     {
       "packageName": "sdkwork-routes-invoice-app-api",
