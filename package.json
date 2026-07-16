@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "gateway:assembly:materialize": "node scripts/gateway/assembly-materialize.mjs",
+    "stop": "node ../sdkwork-specs/tools/stop-sdkwork-workspace-processes.mjs --workspace .",    "gateway:assembly:materialize": "node scripts/gateway/assembly-materialize.mjs",
     "gateway:assembly:validate": "node scripts/gateway/assembly-validate.mjs",
     "check": "pnpm run check:app-composition && pnpm db:validate && pnpm gateway:assembly:validate",
     "db:validate": "node ../sdkwork-specs/tools/check-database-framework-standard.mjs --root .",
