@@ -1,4 +1,4 @@
-use sdkwork_invoice_gateway_assembly::assemble_application_router;
+use sdkwork_api_invoice_assembly::assemble_api_router;
 use sdkwork_invoice_service_host::InvoiceServiceHost;
 use sdkwork_web_bootstrap::{service_router, ServiceRouterConfig};
 use std::sync::Arc;
@@ -7,7 +7,7 @@ use std::sync::Arc;
 async fn main() {
     tracing_subscriber::fmt::init();
     let host = Arc::new(InvoiceServiceHost::new().await);
-    let business = assemble_application_router(host).await.router
+    let business = assemble_api_router(host).await.router
         .layer(sdkwork_web_bootstrap::application_cors_layer_from_env(
             &["SDKWORK_INVOICE_ENVIRONMENT"],
             &["SDKWORK_INVOICE_CORS_ALLOWED_ORIGINS", "SDKWORK_CORS_ALLOWED_ORIGINS"],

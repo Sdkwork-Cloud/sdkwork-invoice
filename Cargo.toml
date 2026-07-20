@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "crates/sdkwork-api-invoice-assembly",
-    "crates/sdkwork-invoice-gateway-assembly",
+    "crates/sdkwork-api-invoice-assembly",
   "crates/sdkwork-invoice-service",
   "crates/sdkwork-invoice-repository-sqlx",
   "crates/sdkwork-routes-invoice-app-api",
@@ -10,7 +10,7 @@ members = [
   "crates/sdkwork-invoice-database-host",
   "crates/sdkwork-invoice-database-bootstrap",
   "crates/sdkwork-invoice-service-host",
-  "crates/sdkwork-invoice-standalone-gateway",
+  "crates/sdkwork-api-invoice-standalone-gateway",
 ]
 
 [workspace.package]
