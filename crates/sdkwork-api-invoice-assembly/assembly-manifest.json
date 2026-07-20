@@ -1,0 +1,32 @@
+{
+  "kind": "sdkwork.api.assembly",
+  "schemaVersion": 1,
+  "applicationCode": "invoice",
+  "apiMode": "served",
+  "packageName": "sdkwork-api-invoice-assembly",
+  "crateDir": "crates/sdkwork-api-invoice-assembly",
+  "routeCrates": [
+    {
+      "packageName": "sdkwork-routes-invoice-app-api",
+      "memberDir": "crates/sdkwork-routes-invoice-app-api",
+      "libName": "sdkwork_routes_invoice_app_api",
+      "surface": "app-api",
+      "pathPrefix": null,
+      "mountOrder": 0,
+      "componentRef": "crates/sdkwork-routes-invoice-app-api/specs/component.spec.json",
+      "routeManifestRef": "crates/sdkwork-routes-invoice-app-api/sdks/_route-manifests/app-api/sdkwork-routes-invoice-app-api.route-manifest.json",
+      "sourceRef": "crates/sdkwork-routes-invoice-app-api/Cargo.toml"
+    },
+    {
+      "packageName": "sdkwork-routes-invoice-backend-api",
+      "memberDir": "crates/sdkwork-routes-invoice-backend-api",
+      "libName": "sdkwork_routes_invoice_backend_api",
+      "surface": "backend-api",
+      "pathPrefix": null,
+      "mountOrder": 1,
+      "componentRef": "crates/sdkwork-routes-invoice-backend-api/specs/component.spec.json",
+      "routeManifestRef": "crates/sdkwork-routes-invoice-backend-api/sdks/_route-manifests/backend-api/sdkwork-routes-invoice-backend-api.route-manifest.json",
+      "sourceRef": "crates/sdkwork-routes-invoice-backend-api/Cargo.toml"
+    }
+  ]
+}
