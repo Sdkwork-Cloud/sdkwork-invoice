@@ -8,15 +8,13 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use sdkwork_contract_service::CommerceServiceError;
+use sdkwork_iam_context_service::IamAppContext;
+use sdkwork_invoice_repository_sqlx::{PostgresCommerceInvoiceStore, SqliteCommerceInvoiceStore};
 use sdkwork_invoice_service::{
     CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemRecord,
     InvoiceListPage, InvoiceListQuery, InvoiceRecord, SubmitOwnerInvoiceCommand,
     UpdateOwnerInvoiceCommand,
 };
-use sdkwork_invoice_repository_sqlx::{
-    PostgresCommerceInvoiceStore, SqliteCommerceInvoiceStore,
-};
-use sdkwork_iam_context_service::IamAppContext;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, SqlitePool};
 
@@ -294,32 +292,32 @@ pub fn app_invoice_router_with_postgres_pool(pool: PgPool) -> Router {
 
 pub fn build_app_invoice_router(store: Arc<dyn CommerceInvoiceStore>) -> Router {
     Router::new()
-            .route(
-                "/app/v3/api/invoices",
-                get(fetch_invoices).post(create_invoice),
-            )
-            .route("/app/v3/api/invoices/mine", get(fetch_invoices))
-            .route(
-                "/app/v3/api/invoices/statistics",
-                get(fetch_invoice_statistics),
-            )
-            .route(
-                "/app/v3/api/invoices/{invoiceId}",
-                get(fetch_invoice).patch(update_invoice),
-            )
-            .route(
-                "/app/v3/api/invoices/{invoiceId}/items",
-                get(fetch_invoice_items),
-            )
-            .route(
-                "/app/v3/api/invoices/{invoiceId}/submissions",
-                post(submit_invoice),
-            )
-            .route(
-                "/app/v3/api/invoices/{invoiceId}/cancellations",
-                post(cancel_invoice),
-            )
-            .with_state(AppInvoiceState { store })
+        .route(
+            "/app/v3/api/invoices",
+            get(fetch_invoices).post(create_invoice),
+        )
+        .route("/app/v3/api/invoices/mine", get(fetch_invoices))
+        .route(
+            "/app/v3/api/invoices/statistics",
+            get(fetch_invoice_statistics),
+        )
+        .route(
+            "/app/v3/api/invoices/{invoiceId}",
+            get(fetch_invoice).patch(update_invoice),
+        )
+        .route(
+            "/app/v3/api/invoices/{invoiceId}/items",
+            get(fetch_invoice_items),
+        )
+        .route(
+            "/app/v3/api/invoices/{invoiceId}/submissions",
+            post(submit_invoice),
+        )
+        .route(
+            "/app/v3/api/invoices/{invoiceId}/cancellations",
+            post(cancel_invoice),
+        )
+        .with_state(AppInvoiceState { store })
 }
 
 async fn fetch_invoices(
@@ -466,15 +464,13 @@ async fn create_invoice(
         Ok(subject) => subject,
         Err(message) => return unauthorized_response(message),
     };
-    let _write_headers = match validate_app_write_payload(
-        &headers,
-        "invoices.create",
-        &body,
-        |idempotency_key| fallback_request_no(&subject, "create", idempotency_key),
-    ) {
-        Ok(value) => value,
-        Err(response) => return response,
-    };
+    let _write_headers =
+        match validate_app_write_payload(&headers, "invoices.create", &body, |idempotency_key| {
+            fallback_request_no(&subject, "create", idempotency_key)
+        }) {
+            Ok(value) => value,
+            Err(response) => return response,
+        };
     let total_amount = body
         .total_amount
         .as_ref()
@@ -518,15 +514,13 @@ async fn submit_invoice(
         Err(message) => return unauthorized_response(message),
     };
     let payload = write_payload_with_route_param("invoiceId", &invoice_id, &serde_json::json!({}));
-    let _write_headers = match validate_app_write_payload(
-        &headers,
-        "invoices.submit",
-        &payload,
-        |idempotency_key| fallback_request_no(&subject, &invoice_id, idempotency_key),
-    ) {
-        Ok(value) => value,
-        Err(response) => return response,
-    };
+    let _write_headers =
+        match validate_app_write_payload(&headers, "invoices.submit", &payload, |idempotency_key| {
+            fallback_request_no(&subject, &invoice_id, idempotency_key)
+        }) {
+            Ok(value) => value,
+            Err(response) => return response,
+        };
     let command = match SubmitOwnerInvoiceCommand::new(
         &subject.tenant_id,
         subject.organization_id.as_deref(),
@@ -570,15 +564,13 @@ async fn cancel_invoice(
     } else {
         write_payload_with_route_param("invoiceId", &invoice_id, &serde_json::json!({}))
     };
-    let _write_headers = match validate_app_write_payload(
-        &headers,
-        "invoices.cancel",
-        &payload,
-        |idempotency_key| fallback_request_no(&subject, &invoice_id, idempotency_key),
-    ) {
-        Ok(value) => value,
-        Err(response) => return response,
-    };
+    let _write_headers =
+        match validate_app_write_payload(&headers, "invoices.cancel", &payload, |idempotency_key| {
+            fallback_request_no(&subject, &invoice_id, idempotency_key)
+        }) {
+            Ok(value) => value,
+            Err(response) => return response,
+        };
     let cancel_reason = cancel_body.and_then(|body| body.cancel_reason);
     let command = match CancelOwnerInvoiceCommand::new(
         &subject.tenant_id,
@@ -617,15 +609,13 @@ async fn update_invoice(
         Err(message) => return unauthorized_response(message),
     };
     let payload = write_payload_with_route_param("invoiceId", &invoice_id, &body);
-    let _write_headers = match validate_app_write_payload(
-        &headers,
-        "invoices.update",
-        &payload,
-        |idempotency_key| fallback_request_no(&subject, &invoice_id, idempotency_key),
-    ) {
-        Ok(value) => value,
-        Err(response) => return response,
-    };
+    let _write_headers =
+        match validate_app_write_payload(&headers, "invoices.update", &payload, |idempotency_key| {
+            fallback_request_no(&subject, &invoice_id, idempotency_key)
+        }) {
+            Ok(value) => value,
+            Err(response) => return response,
+        };
     let command = match UpdateOwnerInvoiceCommand::new(
         &subject.tenant_id,
         subject.organization_id.as_deref(),
@@ -747,7 +737,11 @@ fn not_found_response(message: impl Into<String>) -> Response {
         .into_response()
 }
 
-fn fallback_request_no(subject: &AppRuntimeSubject, invoice_id: &str, idempotency_key: &str) -> String {
+fn fallback_request_no(
+    subject: &AppRuntimeSubject,
+    invoice_id: &str,
+    idempotency_key: &str,
+) -> String {
     format!(
         "invoice-{}-{}-{}",
         subject.user_id, invoice_id, idempotency_key

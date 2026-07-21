@@ -159,15 +159,6 @@ pub(crate) fn parse_required_write_command_headers(
     })
 }
 
-#[allow(clippy::result_large_err)]
-pub(crate) fn required_app_write_command_headers(
-    headers: &HeaderMap,
-    fallback_request_no: impl FnOnce(&str) -> String,
-) -> Result<AppWriteCommandHeaders, Response> {
-    parse_required_write_command_headers(headers, fallback_request_no)
-        .map_err(write_command_header_error_to_app_response)
-}
-
 fn write_command_header_error_to_app_response(error: WriteCommandHeaderError) -> Response {
     match error {
         WriteCommandHeaderError::MissingHeader(name) => {
@@ -175,20 +166,6 @@ fn write_command_header_error_to_app_response(error: WriteCommandHeaderError) ->
         }
         WriteCommandHeaderError::InvalidHeader(message) => validation_response(message),
     }
-}
-
-#[allow(clippy::result_large_err)]
-pub(crate) fn ensure_request_hash_matches(
-    expected_hash: &str,
-    provided_hash: &str,
-) -> Result<(), Response> {
-    if expected_hash.trim() == provided_hash.trim() {
-        return Ok(());
-    }
-
-    Err(validation_response(
-        "Sdkwork-Request-Hash does not match the command payload",
-    ))
 }
 
 #[allow(clippy::result_large_err)]
@@ -245,19 +222,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn required_app_write_command_headers_requires_idempotency_and_request_hash() {
-        let mut headers = HeaderMap::new();
-        headers.insert(IDEMPOTENCY_KEY_HEADER, HeaderValue::from_static("idem-1"));
-        headers.insert(REQUEST_HASH_HEADER, HeaderValue::from_static("hash-1"));
-
-        let parsed = required_app_write_command_headers(&headers, |_| "request-1".to_owned())
-            .expect("headers");
-        assert_eq!(parsed.idempotency_key, "idem-1");
-        assert_eq!(parsed.request_hash, "hash-1");
-        assert_eq!(parsed.request_no, "request-1");
-    }
-
-    #[test]
     fn stable_command_request_hash_is_deterministic() {
         let first = stable_command_request_hash("scope", &["100001", "request-1"]);
         let second = stable_command_request_hash("scope", &["100001", "request-1"]);
@@ -287,11 +251,5 @@ mod tests {
         let from_struct = stable_json_request_hash("payment-method-upsert", &body).expect("hash");
 
         assert_eq!(from_value, from_struct);
-    }
-
-    #[test]
-    fn ensure_request_hash_matches_rejects_mismatch() {
-        let error = ensure_request_hash_matches("expected", "provided").expect_err("mismatch");
-        assert_eq!(error.status(), StatusCode::BAD_REQUEST);
     }
 }
