@@ -13,13 +13,18 @@ axum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }
-sdkwork_contract_service.workspace = true
-sdkwork_invoice_repository_sqlx.workspace = true
-sdkwork_invoice_service.workspace = true
-sdkwork_iam_context_service.workspace = true
-sdkwork_invoice_service_host.workspace = true
+sdkwork-contract-service.workspace = true
+sdkwork-invoice-repository-sqlx.workspace = true
+sdkwork-invoice-service.workspace = true
+sdkwork-iam-context-service.workspace = true
+sdkwork-invoice-service-host.workspace = true
 sdkwork-database-sqlx.workspace = true
 sdkwork-web-core.workspace = true
 sdkwork-web-axum.workspace = true
 sdkwork-web-bootstrap.workspace = true
 sdkwork-iam-web-adapter.workspace = true
+sdkwork-utils-rust.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

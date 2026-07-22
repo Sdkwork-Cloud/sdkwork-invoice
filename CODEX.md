@@ -1,3 +1,3 @@
 # Compatibility Shim
 
-Read `AGENTS.md`.
+Read `AGENTS.md` and use `../sdkwork-specs/README.md` as the global standards index.

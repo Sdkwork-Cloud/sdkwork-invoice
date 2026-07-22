@@ -1,17 +1,37 @@
 # sdkwork-invoice
+
 repository-kind: application
 
-SDKWork commerce **invoice** capability building-block repository (domain `commerce`).
+SDKWork commerce invoice capability. It owns invoice domain rules, tenant-scoped SQLx repositories,
+the app route surface, a reusable API assembly, and a standalone gateway.
 
-- Standards: `../sdkwork-specs/README.md`
-- Composition consumer: `../sdkwork-clawrouter/vendor/sdkwork-commerce (deleted)` (archived transitional platform snapshot)
-- Domain service: `crates/sdkwork-invoice-service/`
-- Repository SQL: `crates/sdkwork-commerce (deleted)-invoice-repository-sqlx/`
-- HTTP API server: `crates/sdkwork-api-invoice-standalone-gateway/`
+## Active Surfaces
 
-## Quick start
+| Surface | API authority | SDK family | Operations |
+| --- | --- | --- | ---: |
+| app-api | `sdkwork-invoice-app-api` | `sdkwork-invoice-app-sdk` | 9 |
+| backend-api | none | none | 0 |
 
-```bash
+No Invoice backend authority, route crate, or SDK family is declared until approved operator
+requirements introduce real operations.
+
+## Repository Layout
+
+- `apis/`: owner-only app OpenAPI contracts.
+- `crates/`: domain, repository, route, host, assembly, and standalone runtime crates.
+- `database/`: invoice-owned database contracts and migrations.
+- `sdks/`: the Invoice app SDK family workspace.
+- `specs/`: application-wide component and IAM contracts.
+- `tools/`: deterministic API/SDK materialization.
+- `apps/`: application-root index; no Invoice UI is implemented here.
+
+Directory rules come from `../sdkwork-specs/SDKWORK_WORKSPACE_SPEC.md`. API and SDK authority comes
+from route manifests, OpenAPI, `sdk-manifest.json`, and component specs rather than this README.
+
+## Verification
+
+```powershell
+pnpm check
 cargo test --workspace
 ```
 
@@ -20,7 +40,4 @@ cargo test --workspace
 - [docs/README.md](docs/README.md)
 - [docs/product/prd/PRD.md](docs/product/prd/PRD.md)
 - [docs/architecture/tech/TECH_ARCHITECTURE.md](docs/architecture/tech/TECH_ARCHITECTURE.md)
-
-## Application Roots
-
 - [apps directory index](apps/README.md)

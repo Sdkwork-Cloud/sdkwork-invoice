@@ -10,4 +10,4 @@ description = "SDKWork commerce invoice and tax document domain rules for local/
 path = "src/lib.rs"
 
 [dependencies]
-sdkwork_contract_service.workspace = true
+sdkwork-contract-service.workspace = true

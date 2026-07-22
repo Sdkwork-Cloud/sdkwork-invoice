@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use sdkwork_contract_service::CommerceServiceError;
 use sdkwork_invoice_service::{
-    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemRecord,
-    InvoiceListPage, InvoiceListQuery, InvoiceRecord, SubmitOwnerInvoiceCommand,
-    UpdateOwnerInvoiceCommand,
+    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemListPage,
+    InvoiceItemListQuery, InvoiceItemRecord, InvoiceListPage, InvoiceListQuery, InvoiceRecord,
+    InvoiceStatistics, SubmitOwnerInvoiceCommand, UpdateOwnerInvoiceCommand,
 };
 use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -113,6 +113,90 @@ impl PostgresCommerceInvoiceStore {
         .await?;
 
         invoice_from_row(invoice_row, &items_by_invoice).map(Some)
+    }
+
+    pub async fn invoice_statistics(
+        &self,
+        query: InvoiceListQuery,
+    ) -> Result<InvoiceStatistics, CommerceServiceError> {
+        let row = sqlx::query(
+            r#"
+            SELECT COUNT(*) AS total,
+                   COALESCE(SUM(CASE WHEN LOWER(status) IN ('issued', 'completed') THEN 1 ELSE 0 END), 0)::BIGINT AS issued,
+                   COALESCE(SUM(CASE WHEN LOWER(status) IN ('cancelled', 'canceled') THEN 1 ELSE 0 END), 0)::BIGINT AS cancelled,
+                   COALESCE(SUM(CASE WHEN LOWER(status) NOT IN ('issued', 'completed', 'cancelled', 'canceled') THEN 1 ELSE 0 END), 0)::BIGINT AS pending
+            FROM commerce_invoice
+            WHERE tenant_id = CAST($1 AS TEXT)
+              AND ((organization_id = CAST($2 AS TEXT)) OR (organization_id IS NULL AND $2 IS NULL))
+              AND owner_user_id = CAST($3 AS TEXT)
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to aggregate invoice statistics", error))?;
+        Ok(InvoiceStatistics {
+            total: row.try_get("total").unwrap_or(0),
+            pending: row.try_get("pending").unwrap_or(0),
+            issued: row.try_get("issued").unwrap_or(0),
+            cancelled: row.try_get("cancelled").unwrap_or(0),
+        })
+    }
+
+    pub async fn list_invoice_items(
+        &self,
+        query: InvoiceItemListQuery,
+    ) -> Result<InvoiceItemListPage, CommerceServiceError> {
+        let total: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*)
+            FROM commerce_invoice_item item
+            JOIN commerce_invoice invoice
+              ON invoice.id = item.invoice_id AND invoice.tenant_id = item.tenant_id
+            WHERE invoice.tenant_id = CAST($1 AS TEXT)
+              AND ((invoice.organization_id = CAST($2 AS TEXT)) OR (invoice.organization_id IS NULL AND $2 IS NULL))
+              AND invoice.owner_user_id = CAST($3 AS TEXT)
+              AND invoice.id = CAST($4 AS TEXT)
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .bind(&query.invoice_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to count invoice items", error))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT item.id, item.tenant_id, item.invoice_id, item.order_item_id, item.title,
+                   item.amount, item.tax_amount, item.created_at
+            FROM commerce_invoice_item item
+            JOIN commerce_invoice invoice
+              ON invoice.id = item.invoice_id AND invoice.tenant_id = item.tenant_id
+            WHERE invoice.tenant_id = CAST($1 AS TEXT)
+              AND ((invoice.organization_id = CAST($2 AS TEXT)) OR (invoice.organization_id IS NULL AND $2 IS NULL))
+              AND invoice.owner_user_id = CAST($3 AS TEXT)
+              AND invoice.id = CAST($4 AS TEXT)
+            ORDER BY item.created_at ASC, item.id ASC
+            LIMIT $5 OFFSET $6
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .bind(&query.invoice_id)
+        .bind(query.page_size)
+        .bind(query.offset())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to list invoice items", error))?;
+        let items = rows
+            .iter()
+            .map(invoice_item_from_row)
+            .collect::<Result<Vec<_>, _>>()?;
+        InvoiceItemListPage::new(items, total, query.page, query.page_size)
     }
 
     pub async fn create_owner_invoice(
@@ -413,20 +497,26 @@ async fn load_items_by_invoice(
 
     let mut items_by_invoice: HashMap<String, Vec<InvoiceItemRecord>> = HashMap::new();
     for row in rows {
-        let invoice_id = string_cell(&row, "invoice_id");
-        let item = InvoiceItemRecord::new(
-            &string_cell(&row, "id"),
-            &string_cell(&row, "tenant_id"),
-            &invoice_id,
-            optional_string_cell(&row, "order_item_id").as_deref(),
-            &string_cell(&row, "title"),
-            &string_cell(&row, "amount"),
-            &string_cell(&row, "tax_amount"),
-            &string_cell(&row, "created_at"),
-        )?;
+        let item = invoice_item_from_row(&row)?;
+        let invoice_id = item.invoice_id.clone();
         items_by_invoice.entry(invoice_id).or_default().push(item);
     }
     Ok(items_by_invoice)
+}
+
+fn invoice_item_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<InvoiceItemRecord, CommerceServiceError> {
+    InvoiceItemRecord::new(
+        &string_cell(row, "id"),
+        &string_cell(row, "tenant_id"),
+        &string_cell(row, "invoice_id"),
+        optional_string_cell(row, "order_item_id").as_deref(),
+        &string_cell(row, "title"),
+        &string_cell(row, "amount"),
+        &string_cell(row, "tax_amount"),
+        &string_cell(row, "created_at"),
+    )
 }
 
 fn invoice_from_row(

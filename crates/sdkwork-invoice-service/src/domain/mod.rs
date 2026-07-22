@@ -78,6 +78,22 @@ pub struct InvoiceListPage {
     pub page_size: i64,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvoiceItemListPage {
+    pub items: Vec<InvoiceItemRecord>,
+    pub total: i64,
+    pub page: i64,
+    pub page_size: i64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvoiceStatistics {
+    pub total: i64,
+    pub pending: i64,
+    pub issued: i64,
+    pub cancelled: i64,
+}
+
 impl InvoiceTitle {
     pub fn company(name: &str, tax_no: &str) -> Result<Self, CommerceServiceError> {
         crate::validation::require_non_empty("invoice title name", name)?;
@@ -236,6 +252,27 @@ impl InvoiceListPage {
         if !(1..=200).contains(&page_size) {
             return Err(CommerceServiceError::validation(
                 "page_size must be between 1 and 200",
+            ));
+        }
+        Ok(Self {
+            items,
+            total,
+            page,
+            page_size,
+        })
+    }
+}
+
+impl InvoiceItemListPage {
+    pub fn new(
+        items: Vec<InvoiceItemRecord>,
+        total: i64,
+        page: i64,
+        page_size: i64,
+    ) -> Result<Self, CommerceServiceError> {
+        if total < 0 || page < 1 || !(1..=200).contains(&page_size) {
+            return Err(CommerceServiceError::validation(
+                "invoice item page metadata is invalid",
             ));
         }
         Ok(Self {

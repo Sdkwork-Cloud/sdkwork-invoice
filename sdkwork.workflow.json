@@ -1,0 +1,121 @@
+{
+  "$schema": "../sdkwork-github-workflow/schemas/sdkwork-workflow.schema.json",
+  "schemaVersion": "2026-06-06.sdkwork.workflow.v1",
+  "app": {
+    "id": "sdkwork-invoice",
+    "name": "SDKWork Invoice",
+    "repository": "Sdkwork-Cloud/sdkwork-invoice",
+    "sourcePath": "."
+  },
+  "release": {
+    "artifactPrefix": "sdkwork-invoice",
+    "defaultVersion": "0.1.0",
+    "changelog": {
+      "source": "auto",
+      "maxCommitSubjects": 50
+    }
+  },
+  "dependencies": [
+    {
+      "id": "sdkwork-account",
+      "repository": "Sdkwork-Cloud/sdkwork-account",
+      "refInput": "SDKWORK_ACCOUNT_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-database",
+      "repository": "Sdkwork-Cloud/sdkwork-database",
+      "refInput": "SDKWORK_DATABASE_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-iam",
+      "repository": "Sdkwork-Cloud/sdkwork-iam",
+      "refInput": "SDKWORK_IAM_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-sdk-generator",
+      "repository": "Sdkwork-Cloud/sdkwork-sdk-generator",
+      "refInput": "SDKWORK_SDK_GENERATOR_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-specs",
+      "repository": "Sdkwork-Cloud/sdkwork-specs",
+      "refInput": "SDKWORK_SPECS_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-utils",
+      "repository": "Sdkwork-Cloud/sdkwork-utils",
+      "refInput": "SDKWORK_UTILS_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    },
+    {
+      "id": "sdkwork-web-framework",
+      "repository": "Sdkwork-Cloud/sdkwork-web-framework",
+      "refInput": "SDKWORK_WEB_FRAMEWORK_REF",
+      "tokenSecret": "SDKWORK_RELEASE_TOKEN"
+    }
+  ],
+  "toolchains": {
+    "node": "22",
+    "pnpm": "10.33.0",
+    "rust": "stable"
+  },
+  "lifecycle": {
+    "install": [
+      {
+        "name": "Install workspace dependencies",
+        "shell": "pwsh",
+        "run": "pnpm install --frozen-lockfile"
+      }
+    ],
+    "build": [
+      {
+        "name": "Verify Invoice",
+        "shell": "pwsh",
+        "run": "pnpm check\ncargo fmt -- --check\ncargo test --workspace\ncargo clippy --workspace --tests -- -D warnings"
+      }
+    ],
+    "package": [
+      {
+        "name": "Build Invoice standalone gateway",
+        "shell": "pwsh",
+        "run": "cargo build --release -p sdkwork-api-invoice-standalone-gateway --bin sdkwork-api-invoice-standalone-gateway"
+      }
+    ],
+    "validate": [
+      {
+        "name": "Validate Invoice contracts",
+        "shell": "pwsh",
+        "run": "node ../sdkwork-specs/tools/verify-repo.mjs --root .\nnode ../sdkwork-specs/tools/check-api-operation-patterns.mjs --workspace .\nnode ../sdkwork-specs/tools/check-api-response-envelope.mjs --workspace .\nnode ../sdkwork-specs/tools/check-pagination.mjs --workspace ."
+      }
+    ]
+  },
+  "targets": [
+    {
+      "id": "linux-x64-standalone-server-tar-gz",
+      "profileBinding": "fixed",
+      "deploymentProfile": "standalone",
+      "runtimeTarget": "server",
+      "profile": "server",
+      "platform": "linux",
+      "architecture": "x64",
+      "formats": ["tar.gz"],
+      "runner": "ubuntu-24.04",
+      "outputGlobs": ["target/release/sdkwork-api-invoice-standalone-gateway"]
+    }
+  ],
+  "security": {
+    "artifactAttestations": true,
+    "sbomRequired": false,
+    "signingRequired": false
+  },
+  "publish": {
+    "workflowArtifact": true,
+    "githubRelease": false,
+    "retentionDays": 30
+  }
+}

@@ -11,6 +11,9 @@ path = "src/lib.rs"
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
+sdkwork-contract-service.workspace = true
+sdkwork-invoice-service.workspace = true
 sqlx = { workspace = true }
-sdkwork_contract_service.workspace = true
-sdkwork_invoice_service.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

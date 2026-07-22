@@ -14,19 +14,8 @@
       "pathPrefix": null,
       "mountOrder": 0,
       "componentRef": "crates/sdkwork-routes-invoice-app-api/specs/component.spec.json",
-      "routeManifestRef": "crates/sdkwork-routes-invoice-app-api/sdks/_route-manifests/app-api/sdkwork-routes-invoice-app-api.route-manifest.json",
+      "routeManifestRef": "crates/sdkwork-routes-invoice-app-api/src/http_route_manifest.rs#app_route_manifest",
       "sourceRef": "crates/sdkwork-routes-invoice-app-api/Cargo.toml"
-    },
-    {
-      "packageName": "sdkwork-routes-invoice-backend-api",
-      "memberDir": "crates/sdkwork-routes-invoice-backend-api",
-      "libName": "sdkwork_routes_invoice_backend_api",
-      "surface": "backend-api",
-      "pathPrefix": null,
-      "mountOrder": 1,
-      "componentRef": "crates/sdkwork-routes-invoice-backend-api/specs/component.spec.json",
-      "routeManifestRef": "crates/sdkwork-routes-invoice-backend-api/sdks/_route-manifests/backend-api/sdkwork-routes-invoice-backend-api.route-manifest.json",
-      "sourceRef": "crates/sdkwork-routes-invoice-backend-api/Cargo.toml"
     }
   ]
 }

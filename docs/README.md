@@ -1,32 +1,22 @@
-# invoice Documentation
+# Invoice Documentation
+
+This directory is the human documentation layer. Machine authority remains in repository and
+module `specs/`, `apis/`, Cargo manifests, route manifests, and SDK manifests.
+
+## Canon
+
+- Product behavior and scope: [product/prd/PRD.md](product/prd/PRD.md)
+- Technical boundaries and runtime composition:
+  [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md)
 
 ## Audience Routing
 
-| I am… | Read first | Then read |
+| Audience | Start here | Supporting material |
 | --- | --- | --- |
-| Product or business | [product/prd/PRD.md](product/prd/PRD.md) | [product/requirements/](product/requirements/) |
-| Architect | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) | [architecture/decisions/](architecture/decisions/) |
-| Developer | [guides/developer/README.md](guides/developer/README.md) | [engineering/plans/](engineering/plans/) |
-| Operator | [guides/operator/README.md](guides/operator/README.md) | [runbooks/](runbooks/) |
-| Integrator | [guides/integrator/README.md](guides/integrator/README.md) | repository `apis/` and `sdks/` |
-| Agent | [../AGENTS.md](../AGENTS.md) | [INDEX.yaml](INDEX.yaml) |
+| Product | [Product PRD](product/prd/PRD.md) | [Requirements](product/requirements/) |
+| Architecture | [Technical architecture](architecture/tech/TECH_ARCHITECTURE.md) | [Decisions](architecture/decisions/) |
+| Development | [Developer guide](guides/developer/README.md) | [Engineering](engineering/) |
+| Operations | [Operator guide](guides/operator/README.md) | [Runbooks](runbooks/) |
+| Integration | [Integrator guide](guides/integrator/README.md) | repository `apis/` and `sdks/` |
 
-## Canon Documents
-
-| Document | Path |
-| --- | --- |
-| Product PRD | [product/prd/PRD.md](product/prd/PRD.md) |
-| Technical architecture | [architecture/tech/TECH_ARCHITECTURE.md](architecture/tech/TECH_ARCHITECTURE.md) |
-
-## Related Specs
-
-- `DOCUMENTATION_SPEC.md`
-- `SDKWORK_WORKSPACE_SPEC.md`
-- `REQUIREMENTS_SPEC.md`
-- `ARCHITECTURE_DECISION_SPEC.md`
-
-## Verification
-
-```bash
-node ../sdkwork-specs/tools/check-repository-docs-standard.mjs --root .
-```
+Documentation layout follows `../sdkwork-specs/DOCUMENTATION_SPEC.md`.

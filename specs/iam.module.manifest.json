@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.iam.module",
+  "moduleId": "invoice",
+  "domain": "commerce",
+  "permissions": {
+    "catalog": [
+      {
+        "code": "commerce.invoices.read",
+        "name": "Read invoices",
+        "resource": "commerce.invoices",
+        "action": "read",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      },
+      {
+        "code": "commerce.invoices.manage",
+        "name": "Manage invoices",
+        "resource": "commerce.invoices",
+        "action": "manage",
+        "status": "active",
+        "since": "1.0.0",
+        "replacementCode": null
+      }
+    ]
+  }
+}

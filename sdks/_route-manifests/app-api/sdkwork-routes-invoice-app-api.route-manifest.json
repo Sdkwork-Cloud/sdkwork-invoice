@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "kind": "sdkwork.route.manifest",
+  "packageName": "sdkwork-routes-invoice-app-api",
+  "surface": "app-api",
+  "owner": "sdkwork-invoice",
+  "domain": "commerce",
+  "capability": "invoice",
+  "apiAuthority": "sdkwork-invoice-app-api",
+  "sdkFamily": "sdkwork-invoice-app-sdk",
+  "prefix": "/app/v3/api",
+  "source": {
+    "crateRoot": "crates/sdkwork-routes-invoice-app-api",
+    "crateImport": "sdkwork_routes_invoice_app_api"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/app/v3/api/invoices",
+      "operationId": "invoices.list",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.read"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/invoices",
+      "operationId": "invoices.create",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.manage"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/invoices/mine",
+      "operationId": "invoices.mine.list",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.read"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/mine"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/invoices/statistics",
+      "operationId": "invoices.statistics.retrieve",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.read"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/statistics"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/invoices/{invoiceId}",
+      "operationId": "invoices.retrieve",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.read"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/{invoiceId}"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "PATCH",
+      "path": "/app/v3/api/invoices/{invoiceId}",
+      "operationId": "invoices.update",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.manage"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/{invoiceId}"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "GET",
+      "path": "/app/v3/api/invoices/{invoiceId}/items",
+      "operationId": "invoices.items.list",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.read"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/{invoiceId}/items"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/invoices/{invoiceId}/submissions",
+      "operationId": "invoices.submissions.create",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.manage"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/{invoiceId}/submissions"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    },
+    {
+      "method": "POST",
+      "path": "/app/v3/api/invoices/{invoiceId}/cancellations",
+      "operationId": "invoices.cancellations.create",
+      "tags": [
+        "invoices"
+      ],
+      "auth": {
+        "mode": "dual-token",
+        "required": true,
+        "permission": "commerce.invoices.manage"
+      },
+      "ownership": {
+        "owner": "sdkwork-invoice",
+        "apiAuthority": "sdkwork-invoice-app-api"
+      },
+      "source": {
+        "file": "sdkwork-routes-invoice-app-api:/app/v3/api/invoices/{invoiceId}/cancellations"
+      },
+      "requestContext": "WebRequestContext",
+      "apiSurface": "app-api"
+    }
+  ]
+}

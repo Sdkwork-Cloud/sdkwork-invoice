@@ -1,6 +1,8 @@
-use axum::http::{HeaderMap, StatusCode};
-use axum::response::{IntoResponse, Response};
-use axum::Json;
+use axum::http::HeaderMap;
+use axum::response::Response;
+use sdkwork_web_core::{
+    problem_response, ProblemCorrelation, WebFrameworkError, WebFrameworkErrorKind,
+};
 use serde::Serialize;
 
 pub(crate) const IDEMPOTENCY_KEY_HEADER: &str = "Idempotency-Key";
@@ -18,12 +20,6 @@ pub(crate) struct AppWriteCommandHeaders {
 pub(crate) enum WriteCommandHeaderError {
     MissingHeader(&'static str),
     InvalidHeader(&'static str),
-}
-
-#[derive(Debug, Serialize)]
-struct CommandHeaderErrorBody {
-    code: &'static str,
-    msg: String,
 }
 
 pub(crate) fn stable_command_request_hash(scope: &str, parts: &[&str]) -> String {
@@ -194,32 +190,29 @@ fn optional_text_header(headers: &HeaderMap, name: &'static str) -> Option<Strin
 }
 
 fn command_header_error_response(message: impl Into<String>) -> Response {
-    (
-        StatusCode::UNAUTHORIZED,
-        Json(CommandHeaderErrorBody {
-            code: "4010",
-            msg: message.into(),
-        }),
-    )
-        .into_response()
+    problem_detail_response(message)
 }
 
 fn validation_response(message: impl Into<String>) -> Response {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(CommandHeaderErrorBody {
-            code: "4001",
-            msg: message.into(),
-        }),
+    problem_detail_response(message)
+}
+
+fn problem_detail_response(message: impl Into<String>) -> Response {
+    let trace_id = uuid::Uuid::new_v4().to_string();
+    problem_response(
+        &WebFrameworkError {
+            kind: WebFrameworkErrorKind::BadRequest,
+            message: message.into(),
+            retry_after_seconds: None,
+        },
+        ProblemCorrelation::from(Some(trace_id.as_str())),
     )
-        .into_response()
 }
 
 #[cfg(test)]
 mod tests {
-    use axum::http::HeaderValue;
-
     use super::*;
+    use axum::http::{header::CONTENT_TYPE, StatusCode};
 
     #[test]
     fn stable_command_request_hash_is_deterministic() {
@@ -251,5 +244,25 @@ mod tests {
         let from_struct = stable_json_request_hash("payment-method-upsert", &body).expect("hash");
 
         assert_eq!(from_value, from_struct);
+    }
+
+    #[test]
+    fn missing_command_header_returns_bad_request_problem_detail() {
+        let response = validate_app_write_payload(
+            &HeaderMap::new(),
+            "invoices.create",
+            &serde_json::json!({ "title": "Example" }),
+            |_| "request-1".to_owned(),
+        )
+        .expect_err("missing headers must fail");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            response
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+            Some("application/problem+json")
+        );
     }
 }

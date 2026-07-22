@@ -3,66 +3,62 @@
 Status: active
 Owner: SDKWork maintainers
 Application: invoice
-Updated: 2026-06-24
+Updated: 2026-07-22
 Specs: REQUIREMENTS_SPEC.md, DOCUMENTATION_SPEC.md
-
-## Document Map
-
-- Commerce repository dissolution: `../sdkwork-specs/MIGRATION_SPEC.md` §8
 
 ## 1. Background And Problem
 
-Invoice issuance, retrieval, and compliance metadata must be auditable and separated from order/payment write paths.
-
-This repository is a **T1 commerce capability building block**. The `sdkwork-commerce (deleted)` monolith has been dissolved; this repository is self-contained with its own domain logic, persistence, HTTP route builders, API server, and IAM middleware for the **invoice** capability.
+Buyers and finance teams need auditable invoice requests, line items, status transitions, and
+summary statistics without coupling invoice lifecycle to order or payment persistence.
 
 ## 2. Target Users
 
-Finance operators, buyers downloading invoices, and compliance reviewers.
+Buyers, merchant finance operators, compliance reviewers, and support teams.
 
 ## 3. Goals And Non-Goals
 
-### Goals
+Goals:
 
-- Own invoice SQL and app invoice HTTP routers with T1 `*-standalone-gateway` IAM wrappers.
+- Own invoice creation, retrieval, update, submission, cancellation, items, and statistics.
+- Expose a tenant-isolated app API with a generated typed SDK.
+- Enforce bounded pagination, idempotent commands, standard errors, and privacy-safe responses.
 
-### Non-Goals
+Non-goals:
 
-- Payment capture execution.
+- Payment capture, tax-engine implementation, or administrator backend workflows without approved
+  product requirements.
 
 ## 4. Scope
 
-- Invoice list/detail/create/update/submit/cancel flows.
-- Invoice repository SQLx implementations.
-
-Primary API prefixes:
-
-- App: `/app/v3/api/invoices`
-- Backend: `/backend/v3/api/invoices`
-
-Migration status: **complete**.
+The active scope is the buyer/merchant app invoice workflow. No backend API or SDK is declared.
 
 ## 5. User Scenarios
 
-- A buyer requests an invoice for a completed order.
-- An operator lists invoice records for a tenant.
+- A buyer requests and later retrieves an invoice.
+- A merchant reviews paginated invoice records and line items.
+- An authorized user submits or cancels an invoice with idempotency protection.
+- Finance users view aggregate invoice status counts without a full-record download.
 
 ## 6. Success Metrics
 
-- Invoice SQL and routes owned exclusively in this repository.
-- Commerce invoice integration tests pass via T1 standalone-gateway IAM wrappers.
+- Every active app route is represented exactly once in the app authority and SDK family.
+- Lists are bounded at the repository layer and statistics use database aggregation.
+- Public responses exclude tenant, organization, and owner implementation identifiers.
+- Invalid command headers and business failures use standard problem responses.
 
 ## 7. Phases
 
-- Phase 1 (complete): SQL + app invoice router owned in sdkwork-invoice.
-- Phase 2 (complete): mutating invoice routes require Idempotency-Key and Sdkwork-Request-Hash via command header validation.
+- Active: nine app API operations and the app SDK family are implemented.
+- Deferred: backend API/SDK work begins only after real administrator requirements are approved.
+- Next: production release evidence, regional compliance requirements, and operational SLOs.
 
 ## 8. Linked Requirements
 
-- Commerce repository dissolution: `../sdkwork-specs/MIGRATION_SPEC.md` §8
-- Component contract: `specs/component.spec.json` (when present)
-- Machine contracts: local `specs/`, future `apis/`, and generated `sdks/`
+- Machine contracts: repository `specs/`, module `specs/component.spec.json`, `apis/`, and
+  `sdks/*/sdk-manifest.json`.
+- Standards: `../sdkwork-specs/API_SPEC.md`, `SDK_SPEC.md`, `PAGINATION_SPEC.md`, `PRIVACY_SPEC.md`,
+  and `SECURITY_SPEC.md`.
 
 ## 9. Open Questions
 
-- Tax identifier and regional compliance fields before production launch.
+- Regional tax identifiers and retention rules require product and compliance approval.

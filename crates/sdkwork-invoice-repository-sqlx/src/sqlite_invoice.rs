@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use sdkwork_contract_service::CommerceServiceError;
 use sdkwork_invoice_service::{
-    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemRecord,
-    InvoiceListPage, InvoiceListQuery, InvoiceRecord, SubmitOwnerInvoiceCommand,
-    UpdateOwnerInvoiceCommand,
+    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemListPage,
+    InvoiceItemListQuery, InvoiceItemRecord, InvoiceListPage, InvoiceListQuery, InvoiceRecord,
+    InvoiceStatistics, SubmitOwnerInvoiceCommand, UpdateOwnerInvoiceCommand,
 };
 use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -116,6 +116,93 @@ impl SqliteCommerceInvoiceStore {
         .await?;
 
         invoice_from_row(invoice_row, &items_by_invoice).map(Some)
+    }
+
+    pub async fn invoice_statistics(
+        &self,
+        query: InvoiceListQuery,
+    ) -> Result<InvoiceStatistics, CommerceServiceError> {
+        let row = sqlx::query(
+            r#"
+            SELECT COUNT(*) AS total,
+                   COALESCE(SUM(CASE WHEN LOWER(status) IN ('issued', 'completed') THEN 1 ELSE 0 END), 0) AS issued,
+                   COALESCE(SUM(CASE WHEN LOWER(status) IN ('cancelled', 'canceled') THEN 1 ELSE 0 END), 0) AS cancelled,
+                   COALESCE(SUM(CASE WHEN LOWER(status) NOT IN ('issued', 'completed', 'cancelled', 'canceled') THEN 1 ELSE 0 END), 0) AS pending
+            FROM commerce_invoice
+            WHERE tenant_id = CAST(? AS TEXT)
+              AND ((organization_id = CAST(? AS TEXT)) OR (organization_id IS NULL AND ? IS NULL))
+              AND owner_user_id = CAST(? AS TEXT)
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to aggregate invoice statistics", error))?;
+        Ok(InvoiceStatistics {
+            total: row.try_get("total").unwrap_or(0),
+            pending: row.try_get("pending").unwrap_or(0),
+            issued: row.try_get("issued").unwrap_or(0),
+            cancelled: row.try_get("cancelled").unwrap_or(0),
+        })
+    }
+
+    pub async fn list_invoice_items(
+        &self,
+        query: InvoiceItemListQuery,
+    ) -> Result<InvoiceItemListPage, CommerceServiceError> {
+        let total: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*)
+            FROM commerce_invoice_item item
+            JOIN commerce_invoice invoice
+              ON invoice.id = item.invoice_id AND invoice.tenant_id = item.tenant_id
+            WHERE invoice.tenant_id = CAST(? AS TEXT)
+              AND ((invoice.organization_id = CAST(? AS TEXT)) OR (invoice.organization_id IS NULL AND ? IS NULL))
+              AND invoice.owner_user_id = CAST(? AS TEXT)
+              AND invoice.id = CAST(? AS TEXT)
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .bind(&query.invoice_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to count invoice items", error))?;
+        let rows = sqlx::query(
+            r#"
+            SELECT item.id, item.tenant_id, item.invoice_id, item.order_item_id, item.title,
+                   item.amount, item.tax_amount, item.created_at
+            FROM commerce_invoice_item item
+            JOIN commerce_invoice invoice
+              ON invoice.id = item.invoice_id AND invoice.tenant_id = item.tenant_id
+            WHERE invoice.tenant_id = CAST(? AS TEXT)
+              AND ((invoice.organization_id = CAST(? AS TEXT)) OR (invoice.organization_id IS NULL AND ? IS NULL))
+              AND invoice.owner_user_id = CAST(? AS TEXT)
+              AND invoice.id = CAST(? AS TEXT)
+            ORDER BY item.created_at ASC, item.id ASC
+            LIMIT ? OFFSET ?
+            "#,
+        )
+        .bind(&query.tenant_id)
+        .bind(query.organization_id.as_deref())
+        .bind(query.organization_id.as_deref())
+        .bind(&query.owner_user_id)
+        .bind(&query.invoice_id)
+        .bind(query.page_size)
+        .bind(query.offset())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| store_error("failed to list invoice items", error))?;
+        let items = rows
+            .iter()
+            .map(invoice_item_from_row)
+            .collect::<Result<Vec<_>, _>>()?;
+        InvoiceItemListPage::new(items, total, query.page, query.page_size)
     }
 
     pub async fn create_owner_invoice(
@@ -418,20 +505,26 @@ async fn load_items_by_invoice(
 
     let mut items_by_invoice: HashMap<String, Vec<InvoiceItemRecord>> = HashMap::new();
     for row in rows {
-        let invoice_id = string_cell(&row, "invoice_id");
-        let item = InvoiceItemRecord::new(
-            &string_cell(&row, "id"),
-            &string_cell(&row, "tenant_id"),
-            &invoice_id,
-            optional_string_cell(&row, "order_item_id").as_deref(),
-            &string_cell(&row, "title"),
-            &string_cell(&row, "amount"),
-            &string_cell(&row, "tax_amount"),
-            &string_cell(&row, "created_at"),
-        )?;
+        let item = invoice_item_from_row(&row)?;
+        let invoice_id = item.invoice_id.clone();
         items_by_invoice.entry(invoice_id).or_default().push(item);
     }
     Ok(items_by_invoice)
+}
+
+fn invoice_item_from_row(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<InvoiceItemRecord, CommerceServiceError> {
+    InvoiceItemRecord::new(
+        &string_cell(row, "id"),
+        &string_cell(row, "tenant_id"),
+        &string_cell(row, "invoice_id"),
+        optional_string_cell(row, "order_item_id").as_deref(),
+        &string_cell(row, "title"),
+        &string_cell(row, "amount"),
+        &string_cell(row, "tax_amount"),
+        &string_cell(row, "created_at"),
+    )
 }
 
 fn invoice_from_row(
@@ -502,4 +595,120 @@ fn invoice_command_timestamp() -> String {
         .map(|duration| duration.as_secs() as i64)
         .unwrap_or(0);
     format!("{seconds}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn invoice_fixture() -> SqlitePool {
+        let pool = SqlitePool::connect("sqlite::memory:")
+            .await
+            .expect("sqlite pool");
+        sqlx::raw_sql(include_str!(
+            "../../../database/ddl/baseline/sqlite/0001_invoice_baseline.sql"
+        ))
+        .execute(&pool)
+        .await
+        .expect("invoice baseline");
+
+        for (index, status) in ["draft", "submitted", "issued", "completed", "cancelled"]
+            .into_iter()
+            .enumerate()
+        {
+            let index = index + 1;
+            let id = format!("invoice-{index}");
+            sqlx::query(
+                r#"
+                INSERT INTO commerce_invoice (
+                    id, tenant_id, organization_id, owner_user_id, order_id, payment_id,
+                    title_id, status, created_at, updated_at
+                ) VALUES (?, 'tenant-1', NULL, 'user-1', ?, ?, 'title-1', ?, ?, ?)
+                "#,
+            )
+            .bind(&id)
+            .bind(format!("order-{index}"))
+            .bind(format!("payment-{index}"))
+            .bind(status)
+            .bind(format!("2026-07-22T00:00:0{index}Z"))
+            .bind(format!("2026-07-22T00:00:0{index}Z"))
+            .execute(&pool)
+            .await
+            .expect("invoice fixture row");
+        }
+
+        for index in 1..=5 {
+            sqlx::query(
+                r#"
+                INSERT INTO commerce_invoice_item (
+                    id, tenant_id, invoice_id, order_item_id, title, amount, tax_amount, created_at
+                ) VALUES (?, 'tenant-1', 'invoice-1', NULL, ?, '10', '1', ?)
+                "#,
+            )
+            .bind(format!("item-{index}"))
+            .bind(format!("Item {index}"))
+            .bind(format!("2026-07-22T00:00:0{index}Z"))
+            .execute(&pool)
+            .await
+            .expect("invoice item fixture row");
+        }
+        pool
+    }
+
+    #[tokio::test]
+    async fn invoice_statistics_are_aggregated_by_status_in_sql() {
+        let store = SqliteCommerceInvoiceStore::new(invoice_fixture().await);
+        let statistics = store
+            .invoice_statistics(
+                InvoiceListQuery::new("tenant-1", None, "user-1", None, None, None)
+                    .expect("statistics query"),
+            )
+            .await
+            .expect("statistics");
+
+        assert_eq!(statistics.total, 5);
+        assert_eq!(statistics.pending, 2);
+        assert_eq!(statistics.issued, 2);
+        assert_eq!(statistics.cancelled, 1);
+    }
+
+    #[tokio::test]
+    async fn invoice_items_return_distinct_pages_with_an_accurate_total() {
+        let store = SqliteCommerceInvoiceStore::new(invoice_fixture().await);
+        let first = store
+            .list_invoice_items(
+                InvoiceItemListQuery::new(
+                    "tenant-1",
+                    None,
+                    "user-1",
+                    "invoice-1",
+                    Some(1),
+                    Some(2),
+                )
+                .expect("first page query"),
+            )
+            .await
+            .expect("first page");
+        let second = store
+            .list_invoice_items(
+                InvoiceItemListQuery::new(
+                    "tenant-1",
+                    None,
+                    "user-1",
+                    "invoice-1",
+                    Some(2),
+                    Some(2),
+                )
+                .expect("second page query"),
+            )
+            .await
+            .expect("second page");
+
+        assert_eq!(first.total, 5);
+        assert_eq!(first.items.len(), 2);
+        assert_eq!(second.items.len(), 2);
+        assert_ne!(first.items[0].id, second.items[0].id);
+        assert_eq!(second.page, 2);
+        assert_eq!(second.page_size, 2);
+    }
 }

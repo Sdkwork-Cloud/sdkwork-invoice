@@ -20,6 +20,16 @@ pub struct InvoiceDetailQuery {
     pub tenant_id: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct InvoiceItemListQuery {
+    pub invoice_id: String,
+    pub organization_id: Option<String>,
+    pub owner_user_id: String,
+    pub page: i64,
+    pub page_size: i64,
+    pub tenant_id: String,
+}
+
 impl InvoiceListQuery {
     pub fn new(
         tenant_id: &str,
@@ -46,7 +56,7 @@ impl InvoiceListQuery {
     }
 
     pub fn limit(&self) -> i64 {
-        self.page_size.unwrap_or(50).clamp(1, 200)
+        self.page_size.unwrap_or(20).clamp(1, 200)
     }
 
     pub fn offset(&self) -> i64 {
@@ -70,16 +80,38 @@ impl InvoiceDetailQuery {
     }
 }
 
-fn validate_page(
-    page: Option<i64>,
-) -> Result<(), sdkwork_contract_service::CommerceServiceError> {
+impl InvoiceItemListQuery {
+    pub fn new(
+        tenant_id: &str,
+        organization_id: Option<&str>,
+        owner_user_id: &str,
+        invoice_id: &str,
+        page: Option<i64>,
+        page_size: Option<i64>,
+    ) -> Result<Self, sdkwork_contract_service::CommerceServiceError> {
+        validate_page(page)?;
+        validate_page_size(page_size)?;
+        Ok(Self {
+            invoice_id: required_text("invoice_id", invoice_id)?,
+            organization_id: optional_text(organization_id),
+            owner_user_id: required_text("owner_user_id", owner_user_id)?,
+            page: page.unwrap_or(1),
+            page_size: page_size.unwrap_or(20),
+            tenant_id: required_text("tenant_id", tenant_id)?,
+        })
+    }
+
+    pub fn offset(&self) -> i64 {
+        (self.page - 1) * self.page_size
+    }
+}
+
+fn validate_page(page: Option<i64>) -> Result<(), sdkwork_contract_service::CommerceServiceError> {
     if let Some(page) = page {
         if page < 1 {
-            return Err(
-                sdkwork_contract_service::CommerceServiceError::validation(
-                    "page must be greater than or equal to 1",
-                ),
-            );
+            return Err(sdkwork_contract_service::CommerceServiceError::validation(
+                "page must be greater than or equal to 1",
+            ));
         }
     }
     Ok(())
@@ -90,11 +122,9 @@ fn validate_page_size(
 ) -> Result<(), sdkwork_contract_service::CommerceServiceError> {
     if let Some(page_size) = page_size {
         if !(1..=200).contains(&page_size) {
-            return Err(
-                sdkwork_contract_service::CommerceServiceError::validation(
-                    "page_size must be between 1 and 200",
-                ),
-            );
+            return Err(sdkwork_contract_service::CommerceServiceError::validation(
+                "page_size must be between 1 and 200",
+            ));
         }
     }
     Ok(())
@@ -113,4 +143,45 @@ fn optional_text(value: Option<&str>) -> Option<String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .map(str::to_string)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invoice_item_query_validates_page_bounds_and_offset() {
+        assert!(InvoiceItemListQuery::new(
+            "tenant-1",
+            None,
+            "user-1",
+            "invoice-1",
+            Some(0),
+            Some(20)
+        )
+        .is_err());
+        assert!(InvoiceItemListQuery::new(
+            "tenant-1",
+            None,
+            "user-1",
+            "invoice-1",
+            Some(1),
+            Some(0)
+        )
+        .is_err());
+        assert!(InvoiceItemListQuery::new(
+            "tenant-1",
+            None,
+            "user-1",
+            "invoice-1",
+            Some(1),
+            Some(201)
+        )
+        .is_err());
+
+        let query =
+            InvoiceItemListQuery::new("tenant-1", None, "user-1", "invoice-1", Some(2), Some(2))
+                .expect("valid item list query");
+        assert_eq!(query.offset(), 2);
+    }
 }

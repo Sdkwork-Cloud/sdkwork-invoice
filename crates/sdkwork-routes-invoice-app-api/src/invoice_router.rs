@@ -11,9 +11,16 @@ use sdkwork_contract_service::CommerceServiceError;
 use sdkwork_iam_context_service::IamAppContext;
 use sdkwork_invoice_repository_sqlx::{PostgresCommerceInvoiceStore, SqliteCommerceInvoiceStore};
 use sdkwork_invoice_service::{
-    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemRecord,
-    InvoiceListPage, InvoiceListQuery, InvoiceRecord, SubmitOwnerInvoiceCommand,
-    UpdateOwnerInvoiceCommand,
+    CancelOwnerInvoiceCommand, CreateOwnerInvoiceCommand, InvoiceDetailQuery, InvoiceItemListPage,
+    InvoiceItemListQuery, InvoiceItemRecord, InvoiceListPage, InvoiceListQuery, InvoiceRecord,
+    InvoiceStatistics, SubmitOwnerInvoiceCommand, UpdateOwnerInvoiceCommand,
+};
+use sdkwork_utils_rust::http_api::{
+    PageInfo, PageMode, SdkWorkApiResponse, SdkWorkCommandData, SdkWorkPageData,
+    SdkWorkResourceData,
+};
+use sdkwork_web_core::{
+    problem_response, ProblemCorrelation, WebFrameworkError, WebFrameworkErrorKind,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, SqlitePool};
@@ -34,6 +41,16 @@ pub trait CommerceInvoiceStore: Send + Sync {
         &'a self,
         query: InvoiceDetailQuery,
     ) -> CommerceInvoiceFuture<'a, Option<InvoiceRecord>>;
+
+    fn invoice_statistics<'a>(
+        &'a self,
+        query: InvoiceListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceStatistics>;
+
+    fn list_invoice_items<'a>(
+        &'a self,
+        query: InvoiceItemListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceItemListPage>;
 
     fn create_owner_invoice<'a>(
         &'a self,
@@ -68,28 +85,10 @@ struct InvoiceListQueryParams {
     status: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AppInvoiceApiResult<T: Serialize> {
-    code: String,
-    msg: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<T>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct InvoiceCollectionResponse {
-    items: Vec<InvoiceResponse>,
-    total: i64,
-    page: i64,
-    page_size: i64,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct InvoiceResourceResponse {
-    item: InvoiceResponse,
+#[derive(Debug, Deserialize)]
+struct InvoiceItemListQueryParams {
+    page: Option<i64>,
+    page_size: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -138,10 +137,6 @@ struct InvoiceMutationResponse {
 #[serde(rename_all = "camelCase")]
 struct InvoiceResponse {
     id: String,
-    tenant_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    organization_id: Option<String>,
-    owner_user_id: String,
     order_id: String,
     payment_id: String,
     title_id: String,
@@ -164,7 +159,6 @@ struct InvoiceResponse {
 #[serde(rename_all = "camelCase")]
 struct InvoiceItemResponse {
     id: String,
-    tenant_id: String,
     invoice_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     order_item_id: Option<String>,
@@ -187,6 +181,20 @@ impl CommerceInvoiceStore for SqliteCommerceInvoiceStore {
         query: InvoiceDetailQuery,
     ) -> CommerceInvoiceFuture<'a, Option<InvoiceRecord>> {
         Box::pin(async move { self.retrieve_invoice(query).await })
+    }
+
+    fn invoice_statistics<'a>(
+        &'a self,
+        query: InvoiceListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceStatistics> {
+        Box::pin(async move { self.invoice_statistics(query).await })
+    }
+
+    fn list_invoice_items<'a>(
+        &'a self,
+        query: InvoiceItemListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceItemListPage> {
+        Box::pin(async move { self.list_invoice_items(query).await })
     }
 
     fn create_owner_invoice<'a>(
@@ -233,6 +241,20 @@ impl CommerceInvoiceStore for PostgresCommerceInvoiceStore {
         Box::pin(async move { self.retrieve_invoice(query).await })
     }
 
+    fn invoice_statistics<'a>(
+        &'a self,
+        query: InvoiceListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceStatistics> {
+        Box::pin(async move { self.invoice_statistics(query).await })
+    }
+
+    fn list_invoice_items<'a>(
+        &'a self,
+        query: InvoiceItemListQuery,
+    ) -> CommerceInvoiceFuture<'a, InvoiceItemListPage> {
+        Box::pin(async move { self.list_invoice_items(query).await })
+    }
+
     fn create_owner_invoice<'a>(
         &'a self,
         command: CreateOwnerInvoiceCommand,
@@ -259,26 +281,6 @@ impl CommerceInvoiceStore for PostgresCommerceInvoiceStore {
         command: UpdateOwnerInvoiceCommand,
     ) -> CommerceInvoiceFuture<'a, InvoiceRecord> {
         Box::pin(async move { self.update_owner_invoice(command).await })
-    }
-}
-
-impl<T: Serialize> AppInvoiceApiResult<T> {
-    fn success(data: T) -> Self {
-        Self {
-            code: "2000".to_owned(),
-            msg: "SUCCESS".to_owned(),
-            data: Some(data),
-        }
-    }
-}
-
-impl AppInvoiceApiResult<()> {
-    fn error(code: impl Into<String>, msg: impl Into<String>) -> Self {
-        Self {
-            code: code.into(),
-            msg: msg.into(),
-            data: None,
-        }
     }
 }
 
@@ -342,7 +344,7 @@ async fn fetch_invoices(
     };
 
     match state.store.list_invoices(query).await {
-        Ok(page) => Json(AppInvoiceApiResult::success(map_invoice_page(page))).into_response(),
+        Ok(page) => success_response(map_invoice_page(page)),
         Err(error) => invoice_system_response("invoice read model is unavailable", error),
     }
 }
@@ -367,10 +369,7 @@ async fn fetch_invoice(
     };
 
     match state.store.retrieve_invoice(query).await {
-        Ok(Some(item)) => Json(AppInvoiceApiResult::success(InvoiceResourceResponse {
-            item: map_invoice(item),
-        }))
-        .into_response(),
+        Ok(Some(item)) => resource_response(map_invoice(item)),
         Ok(None) => not_found_response("invoice was not found"),
         Err(error) => invoice_system_response("invoice read model is unavailable", error),
     }
@@ -389,33 +388,20 @@ async fn fetch_invoice_statistics(
         subject.organization_id.as_deref(),
         &subject.user_id,
         None,
-        Some(1),
-        Some(500),
+        None,
+        None,
     ) {
         Ok(query) => query,
         Err(error) => return validation_response(error.message()),
     };
 
-    match state.store.list_invoices(query).await {
-        Ok(page) => {
-            let mut pending = 0_i64;
-            let mut issued = 0_i64;
-            let mut cancelled = 0_i64;
-            for invoice in page.items {
-                match invoice.status.to_ascii_lowercase().as_str() {
-                    "issued" | "completed" => issued += 1,
-                    "cancelled" | "canceled" => cancelled += 1,
-                    _ => pending += 1,
-                }
-            }
-            Json(AppInvoiceApiResult::success(serde_json::json!({
-                "totalInvoices": page.total,
-                "pendingInvoices": pending,
-                "issuedInvoices": issued,
-                "cancelledInvoices": cancelled,
-            })))
-            .into_response()
-        }
+    match state.store.invoice_statistics(query).await {
+        Ok(statistics) => resource_response(serde_json::json!({
+            "totalInvoices": statistics.total,
+            "pendingInvoices": statistics.pending,
+            "issuedInvoices": statistics.issued,
+            "cancelledInvoices": statistics.cancelled,
+        })),
         Err(error) => {
             invoice_system_response("invoice statistics read model is unavailable", error)
         }
@@ -426,30 +412,26 @@ async fn fetch_invoice_items(
     State(state): State<AppInvoiceState>,
     runtime_context: Option<Extension<IamAppContext>>,
     Path(invoice_id): Path<String>,
+    Query(params): Query<InvoiceItemListQueryParams>,
 ) -> Response {
     let subject = match app_runtime_subject_from_extension(runtime_context) {
         Ok(subject) => subject,
         Err(message) => return unauthorized_response(message),
     };
-    let query = match InvoiceDetailQuery::new(
+    let query = match InvoiceItemListQuery::new(
         &subject.tenant_id,
         subject.organization_id.as_deref(),
         &subject.user_id,
         &invoice_id,
+        params.page,
+        params.page_size,
     ) {
         Ok(query) => query,
         Err(error) => return validation_response(error.message()),
     };
 
-    match state.store.retrieve_invoice(query).await {
-        Ok(Some(item)) => Json(AppInvoiceApiResult::success(
-            item.items
-                .into_iter()
-                .map(map_invoice_item)
-                .collect::<Vec<_>>(),
-        ))
-        .into_response(),
-        Ok(None) => not_found_response("invoice was not found"),
+    match state.store.list_invoice_items(query).await {
+        Ok(page) => success_response(map_invoice_item_page(page)),
         Err(error) => invoice_system_response("invoice items read model is unavailable", error),
     }
 }
@@ -492,13 +474,12 @@ async fn create_invoice(
     };
 
     match state.store.create_owner_invoice(command).await {
-        Ok(record) => Json(AppInvoiceApiResult::success(map_invoice_mutation(
+        Ok(record) => created_resource_response(map_invoice_mutation(
             record,
             &body.title,
             body.title_type.as_deref().unwrap_or("personal"),
             body.invoice_type.as_deref().unwrap_or("normal"),
-        )))
-        .into_response(),
+        )),
         Err(error) => invoice_system_response("invoice create command failed", error),
     }
 }
@@ -538,10 +519,7 @@ async fn submit_invoice(
                 .first()
                 .map(|item| item.title.clone())
                 .unwrap_or_default();
-            Json(AppInvoiceApiResult::success(map_invoice_mutation(
-                record, &title, "personal", "normal",
-            )))
-            .into_response()
+            created_resource_response(map_invoice_mutation(record, &title, "personal", "normal"))
         }
         Err(error) => invoice_system_response("invoice submit command failed", error),
     }
@@ -584,15 +562,11 @@ async fn cancel_invoice(
     };
 
     match state.store.cancel_owner_invoice(command).await {
-        Ok(()) => (
-            StatusCode::OK,
-            Json(AppInvoiceApiResult::<()> {
-                code: "2000".to_owned(),
-                msg: "SUCCESS".to_owned(),
-                data: None,
-            }),
-        )
-            .into_response(),
+        Ok(()) => created_resource_response(SdkWorkCommandData {
+            accepted: true,
+            resource_id: Some(invoice_id),
+            status: Some("cancelled".to_owned()),
+        }),
         Err(error) => invoice_system_response("invoice cancel command failed", error),
     }
 }
@@ -633,13 +607,12 @@ async fn update_invoice(
     };
 
     match state.store.update_owner_invoice(command).await {
-        Ok(record) => Json(AppInvoiceApiResult::success(map_invoice_mutation(
+        Ok(record) => resource_response(map_invoice_mutation(
             record,
             body.title.as_deref().unwrap_or(""),
             "personal",
             "normal",
-        )))
-        .into_response(),
+        )),
         Err(error) => invoice_system_response("invoice update command failed", error),
     }
 }
@@ -670,21 +643,41 @@ fn map_invoice_mutation(
     }
 }
 
-fn map_invoice_page(page: InvoiceListPage) -> InvoiceCollectionResponse {
-    InvoiceCollectionResponse {
+fn map_invoice_page(page: InvoiceListPage) -> SdkWorkPageData<InvoiceResponse> {
+    let total_pages = page.total.saturating_add(page.page_size - 1) / page.page_size;
+    SdkWorkPageData {
         items: page.items.into_iter().map(map_invoice).collect(),
-        total: page.total,
-        page: page.page,
-        page_size: page.page_size,
+        page_info: PageInfo {
+            mode: PageMode::Offset,
+            page: Some(page.page as i32),
+            page_size: Some(page.page_size as i32),
+            total_items: Some(page.total.to_string()),
+            total_pages: Some(total_pages as i32),
+            next_cursor: None,
+            has_more: Some(page.page * page.page_size < page.total),
+        },
+    }
+}
+
+fn map_invoice_item_page(page: InvoiceItemListPage) -> SdkWorkPageData<InvoiceItemResponse> {
+    let total_pages = page.total.saturating_add(page.page_size - 1) / page.page_size;
+    SdkWorkPageData {
+        items: page.items.into_iter().map(map_invoice_item).collect(),
+        page_info: PageInfo {
+            mode: PageMode::Offset,
+            page: Some(page.page as i32),
+            page_size: Some(page.page_size as i32),
+            total_items: Some(page.total.to_string()),
+            total_pages: Some(total_pages as i32),
+            next_cursor: None,
+            has_more: Some(page.page * page.page_size < page.total),
+        },
     }
 }
 
 fn map_invoice(value: InvoiceRecord) -> InvoiceResponse {
     InvoiceResponse {
         id: value.id,
-        tenant_id: value.tenant_id,
-        organization_id: value.organization_id,
-        owner_user_id: value.owner_user_id,
         order_id: value.order_id,
         payment_id: value.payment_id,
         title_id: value.title_id,
@@ -703,7 +696,6 @@ fn map_invoice(value: InvoiceRecord) -> InvoiceResponse {
 fn map_invoice_item(value: InvoiceItemRecord) -> InvoiceItemResponse {
     InvoiceItemResponse {
         id: value.id,
-        tenant_id: value.tenant_id,
         invoice_id: value.invoice_id,
         order_item_id: value.order_item_id,
         title: value.title,
@@ -714,27 +706,15 @@ fn map_invoice_item(value: InvoiceItemRecord) -> InvoiceItemResponse {
 }
 
 fn unauthorized_response(message: String) -> Response {
-    (
-        StatusCode::UNAUTHORIZED,
-        Json(AppInvoiceApiResult::error("4010", message)),
-    )
-        .into_response()
+    api_problem_response(WebFrameworkErrorKind::MissingCredentials, message)
 }
 
 fn validation_response(message: impl Into<String>) -> Response {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(AppInvoiceApiResult::error("4001", message)),
-    )
-        .into_response()
+    api_problem_response(WebFrameworkErrorKind::BadRequest, message)
 }
 
 fn not_found_response(message: impl Into<String>) -> Response {
-    (
-        StatusCode::NOT_FOUND,
-        Json(AppInvoiceApiResult::error("4040", message)),
-    )
-        .into_response()
+    api_problem_response(WebFrameworkErrorKind::NotFound, message)
 }
 
 fn fallback_request_no(
@@ -753,18 +733,79 @@ fn invoice_system_response(context: &str, error: CommerceServiceError) -> Respon
         "validation" => validation_response(error.message()),
         "unauthenticated" | "unauthorized" => unauthorized_response(error.message().to_owned()),
         "not-found" => not_found_response(error.message()),
-        "conflict" => (
-            StatusCode::CONFLICT,
-            Json(AppInvoiceApiResult::error("4090", error.message())),
-        )
-            .into_response(),
-        _ => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(AppInvoiceApiResult::error(
-                "5000",
-                format!("{context}: {}", error.message()),
-            )),
-        )
-            .into_response(),
+        "conflict" => api_problem_response(WebFrameworkErrorKind::Conflict, error.message()),
+        _ => api_problem_response(
+            WebFrameworkErrorKind::DependencyUnavailable,
+            format!("{context}: {}", error.message()),
+        ),
+    }
+}
+
+fn trace_id() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
+fn success_response<T: Serialize>(data: T) -> Response {
+    Json(SdkWorkApiResponse::success(data, trace_id())).into_response()
+}
+
+fn resource_response<T: Serialize>(item: T) -> Response {
+    success_response(SdkWorkResourceData { item })
+}
+
+fn created_resource_response<T: Serialize>(item: T) -> Response {
+    (
+        StatusCode::CREATED,
+        Json(SdkWorkApiResponse::success(
+            SdkWorkResourceData { item },
+            trace_id(),
+        )),
+    )
+        .into_response()
+}
+
+fn api_problem_response(kind: WebFrameworkErrorKind, message: impl Into<String>) -> Response {
+    let trace_id = trace_id();
+    problem_response(
+        &WebFrameworkError {
+            kind,
+            message: message.into(),
+            retry_after_seconds: None,
+        },
+        ProblemCorrelation::from(Some(trace_id.as_str())),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn cancellation_create_response_uses_201_and_data_item() {
+        let response = created_resource_response(SdkWorkCommandData {
+            accepted: true,
+            resource_id: Some("invoice-1".to_owned()),
+            status: Some("cancelled".to_owned()),
+        });
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body");
+        let json: serde_json::Value = serde_json::from_slice(&body).expect("response json");
+        assert_eq!(json["code"], 0);
+        assert_eq!(json["data"]["item"]["accepted"], true);
+        assert_eq!(json["data"]["item"]["resourceId"], "invoice-1");
+        assert_eq!(json["data"]["item"]["status"], "cancelled");
+    }
+
+    #[test]
+    fn item_page_mapping_reports_total_and_has_more() {
+        let page = InvoiceItemListPage::new(Vec::new(), 5, 2, 2).expect("item page");
+        let mapped = map_invoice_item_page(page);
+        assert_eq!(mapped.page_info.page, Some(2));
+        assert_eq!(mapped.page_info.page_size, Some(2));
+        assert_eq!(mapped.page_info.total_items.as_deref(), Some("5"));
+        assert_eq!(mapped.page_info.total_pages, Some(3));
+        assert_eq!(mapped.page_info.has_more, Some(true));
     }
 }

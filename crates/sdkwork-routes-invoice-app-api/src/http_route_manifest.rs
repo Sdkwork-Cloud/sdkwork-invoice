@@ -1,0 +1,62 @@
+use sdkwork_web_core::{HttpMethod, HttpRoute, HttpRouteManifest};
+
+const HTTP_ROUTES: &[HttpRoute] = &[
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/invoices",
+        "commerce.invoices.read",
+        "invoices.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/app/v3/api/invoices",
+        "commerce.invoices.manage",
+        "invoices.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/invoices/mine",
+        "commerce.invoices.read",
+        "invoices.mine.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/invoices/statistics",
+        "commerce.invoices.read",
+        "invoices.statistics.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/invoices/{invoiceId}",
+        "commerce.invoices.read",
+        "invoices.retrieve",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Patch,
+        "/app/v3/api/invoices/{invoiceId}",
+        "commerce.invoices.manage",
+        "invoices.update",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Get,
+        "/app/v3/api/invoices/{invoiceId}/items",
+        "commerce.invoices.read",
+        "invoices.items.list",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/app/v3/api/invoices/{invoiceId}/submissions",
+        "commerce.invoices.manage",
+        "invoices.submissions.create",
+    ),
+    HttpRoute::dual_token(
+        HttpMethod::Post,
+        "/app/v3/api/invoices/{invoiceId}/cancellations",
+        "commerce.invoices.manage",
+        "invoices.cancellations.create",
+    ),
+];
+
+pub fn app_route_manifest() -> HttpRouteManifest {
+    HttpRouteManifest::new(HTTP_ROUTES)
+}
